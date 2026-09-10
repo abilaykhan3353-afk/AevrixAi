@@ -48,13 +48,65 @@ const SEARCH_TRIGGERS = [
   'курс евро', 'актуальн', 'в этом году', 'цена на', 'сколько стоит', 'результат матча',
   'счёт матча', 'кто выиграл', 'кто сейчас', 'кто является', 'текущий', 'на данный момент',
   'обновлени', 'вышла ли', 'вышел ли', 'релиз', 'выборы', 'котировк', 'что происходит',
-  'найди', 'поищи', 'загугли', 'посмотри в интернете'
+  'найди', 'поищи', 'загугли', 'посмотри в интернете',
+  // частые сокращения и разговорные варианты — тоже должны запускать поиск
+  'щас', 'седня', 'счас'
 ];
 
+// Приводим текст к более "стандартному" виду перед сравнением:
+// - "ё" почти всегда печатают как "е" (это не опечатка, а норма набора текста)
+function normalizeRu(text) {
+  return text.toLowerCase().replace(/ё/g, 'е');
+}
+
+// Расстояние Левенштейна — сколько правок (замена/вставка/удаление одной
+// буквы) нужно, чтобы превратить одно слово в другое. Используем для
+// поиска триггеров даже при опечатке в сообщении пользователя.
+function levenshtein(a, b) {
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+// Проверяет, похоже ли слово сообщения на слово-триггер с учётом
+// возможной опечатки (используется и для одиночных, и для составных
+// триггеров — см. needsSearch).
+function fuzzyWordMatches(word, target) {
+  if (word === target) return true;
+  const maxDistance = target.length > 6 ? 2 : 1;
+  if (Math.abs(word.length - target.length) > maxDistance + 2) return false;
+  return levenshtein(word, target) <= maxDistance;
+}
+
 function needsSearch(message) {
-  const text = message.toLowerCase();
+  const text = normalizeRu(message);
   if (/\b20(2[4-9]|3\d)\b/.test(text)) return true;
-  return SEARCH_TRIGGERS.some((trigger) => text.includes(trigger));
+
+  // Точное совпадение (самый частый случай — без опечаток)
+  if (SEARCH_TRIGGERS.some((trigger) => text.includes(trigger))) return true;
+
+  // Опечатка в любом слове триггера — разбиваем и сообщение, и каждый
+  // триггер на отдельные слова: если для каждого слова триггера
+  // (например "курс" и "валют" для триггера "курс валют") в сообщении
+  // нашлось похожее слово (с учётом опечатки) — считаем, что триггер
+  // сработал. Так опечатки ловятся и в однословных ("севодня"), и в
+  // составных ("курс валлют", "результад матча") триггерах.
+  const words = text.split(/[^а-яa-z0-9]+/).filter((w) => w.length > 2);
+
+  return SEARCH_TRIGGERS.some((trigger) => {
+    const triggerWords = trigger.split(' ');
+    return triggerWords.every((tw) => words.some((w) => fuzzyWordMatches(w, tw)));
+  });
 }
 
 /* =====================================================================
@@ -231,7 +283,7 @@ async function callGroq(model, messages, timeoutMs) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.GROQ_API_KEY}`
       },
-      body: JSON.stringify({ model, messages, max_completion_tokens: 1024 }),
+      body: JSON.stringify({ model, messages, max_completion_tokens: 1024, temperature: 0.5 }),
       signal: controller.signal
     });
 
@@ -280,7 +332,7 @@ async function streamGroq(model, messages, timeoutMs, onDelta) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.GROQ_API_KEY}`
       },
-      body: JSON.stringify({ model, messages, max_completion_tokens: 1024, stream: true }),
+      body: JSON.stringify({ model, messages, max_completion_tokens: 1024, temperature: 0.5, stream: true }),
       signal: controller.signal
     });
 
@@ -547,7 +599,24 @@ app.post('/api/chat/stream', async (req, res) => {
       `Ты чат-бот из учебного проекта. ${toneInstruction} ` +
       'Помни контекст всего разговора. Если вопрос очень широкий ' +
       '(например, "расскажи всё про..."), не пытайся охватить всё — кратко ' +
-      'ответь по самой сути, без лишней длины.'
+      'ответь по самой сути, без лишней длины. ' +
+      'В сообщениях пользователя могут быть любые опечатки (пропущенные, ' +
+      'переставленные или заменённые буквы, слитное написание, отсутствие ' +
+      'знаков препинания) и любые сокращения/сленг — это нормально для ' +
+      'обычной переписки, не акцентируй на этом внимание и не исправляй ' +
+      'пользователя. Примеры частых сокращений, которые нужно понимать: ' +
+      '"спс"/"пжлст"/"плз" (спасибо/пожалуйста), "щас"/"счас"/"седня" ' +
+      '(сейчас/сегодня), "норм"/"ок"/"оч" (нормально/хорошо/очень), "мб" ' +
+      '(может быть), "кмк" (как мне кажется), "го" (давай), "инфа" ' +
+      '(информация), "прив"/"дарова" (приветствие), "скок" (сколько), ' +
+      '"чё"/"шо" (что) — но это не полный список, по такому же принципу ' +
+      'разбирай и любые другие похожие сокращения. Всегда старайся понять ' +
+      'наиболее вероятный смысл сообщения по контексту всего разговора и ' +
+      'отвечай по существу сразу, а не переспрашивай. Уточняющий вопрос ' +
+      'задавай только если сообщение действительно можно понять несколькими ' +
+      'совершенно разными способами — и даже тогда сначала попробуй дать ' +
+      'полезный ответ на самый вероятный вариант, а уточнение добавь ' +
+      'отдельной короткой фразой в конце.'
   };
 
   async function persistAndFinish(reply, sources, usedSearch) {
