@@ -1,24 +1,30 @@
 :root {
-  --ink: #16161D;
-  --paper: #FFFDF7;
-  --bg-page: #FFB703;
-  --brand-pink: #FF3D7F;
-  --brand-blue: #2B6CFF;
-  --brand-green: #06D6A0;
-  --text-primary: #16161D;
-  --text-muted: #6B6B76;
-  --border-soft: rgba(22, 22, 29, 0.12);
-  --shadow-color: rgba(22, 22, 29, 1);
+  /* ===== Палитра «Сигнал» ===== */
+  --bg-void: #0A0B0D;              /* фон приложения — глубокий, но не чистый чёрный */
+  --bg-glass: #121417;             /* поверхность приложения (плоская, без стекла) */
+  --bg-glass-strong: #1C1F23;      /* поверхность при hover/active */
+  --bg-bubble-bot: #15171A;        /* фон для блоков кода/цитат внутри сообщений */
+  --border-glass: rgba(255, 255, 255, 0.09);
+  --text-primary: #EAEAE6;         /* тёплый белый, не чистый #FFF */
+  --text-muted: #85888D;
+  --shadow-app: rgba(0, 0, 0, 0.6);
+  --brand-a: #39FF88;              /* единственный акцент — сигнальный зелёный */
+  --brand-b: #1FAA5C;              /* приглушённый вариант акцента (ссылки, второстепенное) */
+  --brand-c: #FF5C5C;              /* тёплый акцент для "активных" состояний (запись голоса) */
 }
 
-[data-theme="dark"] {
-  --ink: #FFFDF7;
-  --paper: #23232E;
-  --bg-page: #14141A;
-  --text-primary: #FFFDF7;
-  --text-muted: #A8A8B8;
-  --border-soft: rgba(255, 253, 247, 0.14);
-  --shadow-color: rgba(0, 0, 0, 1);
+[data-theme="light"] {
+  --bg-void: #F3F3EF;
+  --bg-glass: #FFFFFF;
+  --bg-glass-strong: #ECECE7;
+  --bg-bubble-bot: #F7F7F4;
+  --border-glass: rgba(10, 11, 13, 0.10);
+  --text-primary: #14161A;
+  --text-muted: #6B6E73;
+  --shadow-app: rgba(20, 20, 20, 0.15);
+  --brand-a: #0F9D58;              /* более глубокий зелёный — контраст на светлом фоне */
+  --brand-b: #0B7A43;
+  --brand-c: #D64545;
 }
 
 * {
@@ -46,20 +52,16 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--bg-page);
-  background-image: radial-gradient(var(--ink) 1.4px, transparent 1.4px);
-  background-size: 22px 22px;
-  background-position: -8px -8px;
+  background: var(--bg-void);
   font-family: 'Inter', system-ui, sans-serif;
   overflow: hidden;
   overscroll-behavior-y: contain;
   position: relative;
-  transition: background-color 0.3s ease;
+  transition: background 0.3s ease;
 }
 
-[data-theme="dark"] body {
-  background-image: radial-gradient(rgba(255, 253, 247, 0.14) 1.4px, transparent 1.4px);
-}
+/* Фоновые декоративные пятна убраны — концепция «Сигнал» использует
+   плоский тёмный фон и единственный акцент (волну), без свечения/ауроры. */
 
 /* ===== Иконки (SVG вместо эмодзи) ===== */
 .rail-btn svg,
@@ -78,18 +80,10 @@ body {
 }
 
 #sendButton svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   display: block;
   margin: 0 auto;
-}
-
-.copy-btn svg,
-.speak-btn svg,
-.regenerate-btn svg {
-  width: 13px;
-  height: 13px;
-  display: block;
 }
 
 .app {
@@ -99,40 +93,39 @@ body {
   max-width: 760px;
   height: 700px;
   display: flex;
-  border-radius: 22px;
+  border-radius: 28px;
   overflow: hidden;
-  background: var(--paper);
-  border: 3.5px solid var(--ink);
-  box-shadow: 9px 9px 0 var(--shadow-color);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 40px 90px var(--shadow-app);
 }
 
 /* ===== Боковая панель ===== */
 .rail {
-  width: 62px;
+  width: 60px;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 20px 0;
   gap: 10px;
-  background: var(--brand-blue);
-  border-right: 3.5px solid var(--ink);
+  border-right: 1px solid var(--border-glass);
 }
 
 .logo-badge {
-  border-radius: 50%;
+  border-radius: 26%;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: var(--brand-green);
-  border: 2.5px solid var(--ink);
+  background: #05060e;
 }
 
-.logo-badge svg {
-  width: 60%;
-  height: 60%;
-  fill: var(--ink);
+.logo-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .logo-badge--sm {
@@ -141,43 +134,22 @@ body {
   margin-bottom: 14px;
 }
 
-.logo-badge--lg {
-  width: 84px;
-  height: 84px;
-  margin-bottom: 6px;
-  background: var(--brand-green);
-  border-width: 3.5px;
-  box-shadow: 5px 5px 0 var(--shadow-color);
-  animation: badgeWiggle 3s ease-in-out infinite;
-}
-
-@keyframes badgeWiggle {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-4deg); }
-  75% { transform: rotate(4deg); }
-}
-
 .rail-btn {
   width: 38px;
   height: 38px;
-  border: 2.5px solid transparent;
+  border: none;
   border-radius: 12px;
   background: transparent;
-  color: #FFFDF7;
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .rail-btn:hover {
-  background: rgba(255, 253, 247, 0.2);
-  border-color: var(--ink);
-}
-
-.rail-btn:active {
-  transform: scale(0.92);
+  background: var(--bg-glass-strong);
 }
 
 .rail-bottom {
@@ -191,7 +163,29 @@ body {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: var(--paper);
+}
+
+/* Баннер публичного read-only просмотра расшаренного разговора */
+.shared-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  background: var(--bg-glass-strong);
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.shared-banner button {
+  background: none;
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .chat-header {
@@ -199,7 +193,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 16px 22px;
-  border-bottom: 3.5px solid var(--ink);
+  border-bottom: 1px solid var(--border-glass);
 }
 
 .header-identity {
@@ -214,9 +208,9 @@ body {
 }
 
 .identity-text h1 {
-  font-family: 'Baloo 2', sans-serif;
-  font-weight: 700;
-  font-size: 18px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -224,9 +218,10 @@ body {
 }
 
 .brand-ai {
-  color: var(--brand-pink);
-  display: inline-block;
-  transform: rotate(-3deg);
+  background: var(--brand-a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .status {
@@ -240,7 +235,7 @@ body {
 
 .header-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 .header-actions button,
@@ -248,26 +243,20 @@ body {
   width: 34px;
   height: 34px;
   flex-shrink: 0;
-  border: 2.5px solid transparent;
+  border: none;
   border-radius: 10px;
   background: transparent;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .header-actions button:hover,
 .icon-btn:hover {
-  background: var(--bg-page);
-  border-color: var(--ink);
-}
-
-.header-actions button:active,
-.icon-btn:active {
-  transform: scale(0.92);
+  background: var(--bg-glass-strong);
 }
 
 #accountBtn.logged-in {
@@ -278,13 +267,13 @@ body {
 #accountBtn.logged-in::after {
   content: '';
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--brand-green);
-  border: 1.5px solid var(--ink);
+  background: var(--brand-a);
+  border: 1.5px solid var(--bg-void);
 }
 
 /* ===== Поиск ===== */
@@ -293,13 +282,13 @@ body {
   align-items: center;
   gap: 10px;
   padding: 10px 22px;
-  border-bottom: 3px solid var(--ink);
+  border-bottom: 1px solid var(--border-glass);
 }
 
 .search-bar input {
   flex: 1;
-  border: 2.5px solid var(--ink);
-  background: var(--paper);
+  border: none;
+  background: var(--bg-glass-strong);
   border-radius: 10px;
   padding: 8px 12px;
   font-family: 'Inter', sans-serif;
@@ -315,6 +304,27 @@ body {
 }
 
 /* ===== Экран приветствия ===== */
+/* ===== Волна-сигнал: визуальное состояние Aevrix (готов/думает/отвечает) ===== */
+.wave-wrap {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 130px;
+  transition: height 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chat-panel.chat-active .wave-wrap {
+  height: 56px;
+}
+
+#waveCanvas {
+  width: 100%;
+  max-width: 460px;
+  height: 100%;
+  display: block;
+}
+
 .hero {
   flex: 1;
   display: flex;
@@ -327,9 +337,9 @@ body {
 }
 
 .hero h2 {
-  font-family: 'Baloo 2', sans-serif;
-  font-weight: 700;
-  font-size: 26px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 24px;
   color: var(--text-primary);
 }
 
@@ -345,34 +355,26 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   max-width: 420px;
   margin-top: 4px;
 }
 
 .suggested-prompt-btn {
-  background: var(--paper);
-  border: 2.5px solid var(--ink);
+  background: none;
+  border: 1px solid var(--border-glass);
   color: var(--text-primary);
   font-family: 'Inter', sans-serif;
-  font-weight: 600;
   font-size: 13px;
   padding: 9px 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
-  box-shadow: 3px 3px 0 var(--shadow-color);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .suggested-prompt-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--shadow-color);
-  background: var(--brand-green);
-}
-
-.suggested-prompt-btn:active {
-  transform: translate(3px, 3px);
-  box-shadow: 0 0 0 var(--shadow-color);
+  border-color: var(--brand-a);
+  transform: translateY(-1px);
 }
 
 /* ===== Сообщения ===== */
@@ -384,7 +386,7 @@ body {
   overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -392,14 +394,14 @@ body {
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: var(--ink);
+  background: var(--border-glass);
   border-radius: 10px;
 }
 
 .message {
   display: flex;
-  max-width: 78%;
-  animation: riseIn 0.2s ease;
+  max-width: 82%;
+  animation: riseIn 0.25s ease;
   position: relative;
 }
 
@@ -418,37 +420,30 @@ body {
   min-width: 0;
 }
 
+/* Сообщения — типографика, без фона/рамки/пузыря. Бот и пользователь
+   различаются шрифтом и выравниванием, а не цветными "коробками". */
 .bubble {
-  padding: 11px 15px;
-  font-size: 14.5px;
-  line-height: 1.55;
-  border-radius: 16px;
-  border: 2.5px solid var(--ink);
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 15.5px;
+  line-height: 1.6;
   word-wrap: break-word;
   overflow-wrap: anywhere;
-  position: relative;
 }
 
-/* "Хвостик" пузыря — как в настоящем комиксе */
-.bubble::after {
-  content: '';
-  position: absolute;
-  bottom: -3px;
-  width: 16px;
-  height: 16px;
-  background: inherit;
-  border-bottom: 2.5px solid var(--ink);
+.message-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 7px;
+  padding: 0 1px;
 }
 
 .timestamp {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 4px;
-  padding: 0 4px;
-}
-
-.chat-messages.hide-timestamps .timestamp {
-  display: none;
+  flex-shrink: 0;
 }
 
 .bot-message {
@@ -456,16 +451,9 @@ body {
 }
 
 .bot-message .bubble {
-  background: var(--paper);
   color: var(--text-primary);
-  border-bottom-left-radius: 4px;
-}
-
-.bot-message .bubble::after {
-  left: -2px;
-  border-left: 2.5px solid var(--ink);
-  border-bottom-left-radius: 10px;
-  transform: skewX(-25deg);
+  font-family: 'Inter', sans-serif;
+  font-weight: 450;
 }
 
 .user-message {
@@ -476,76 +464,71 @@ body {
   align-items: flex-end;
 }
 
+.user-message .message-footer {
+  flex-direction: row-reverse;
+}
+
 .user-message .bubble {
-  background: var(--brand-pink);
-  color: #FFFDF7;
-  border-bottom-right-radius: 4px;
+  color: var(--text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 400;
+  text-align: right;
 }
 
-.user-message .bubble::after {
-  right: -2px;
-  border-right: 2.5px solid var(--ink);
-  border-bottom-right-radius: 10px;
-  transform: skewX(25deg);
-}
-
-.copy-btn {
-  position: absolute;
-  top: -12px;
-  right: 8px;
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--ink);
-  border-radius: 7px;
-  background: var(--paper);
-  font-size: 11px;
-  color: var(--text-primary);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.user-message .copy-btn {
-  right: auto;
-  left: 8px;
-}
-
-.message:hover .copy-btn {
-  opacity: 1;
-}
-
-mark {
-  background: var(--brand-green);
-  color: var(--ink);
-  border-radius: 3px;
-  padding: 0 2px;
-}
-
-.typing-bubble {
+/* Панель действий (копировать / озвучить / перегенерировать / закладка) —
+   компактный ряд иконок, проявляется при наведении на сообщение. Время
+   всегда видно рядом, отдельно от этой панели. */
+.message-actions {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 13px 16px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
-.typing-bubble span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--brand-pink);
-  border: 1.5px solid var(--ink);
-  animation: typingBounce 1.2s infinite ease-in-out;
+.message:hover .message-actions,
+.message-actions:focus-within {
+  opacity: 1;
 }
 
-.typing-bubble span:nth-child(2) { animation-delay: 0.15s; }
-.typing-bubble span:nth-child(3) { animation-delay: 0.3s; }
+.message-actions button {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
 
-@keyframes typingBounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
-  30% { transform: translateY(-5px); opacity: 1; }
+.message-actions button:hover {
+  color: var(--text-primary);
+  background: var(--bg-glass-strong);
+}
+
+.message-actions svg {
+  width: 13px;
+  height: 13px;
+  display: block;
+}
+
+.message-actions .regenerate-btn:active {
+  transform: rotate(-45deg);
+}
+
+.message-actions .pin-btn.pinned {
+  color: var(--brand-a);
+}
+
+mark {
+  background: var(--brand-b);
+  color: #06231F;
+  border-radius: 3px;
+  padding: 0 2px;
 }
 
 .sources {
@@ -557,9 +540,12 @@ mark {
 }
 
 .sources a {
-  color: var(--brand-blue);
+  color: var(--brand-b);
+  text-decoration: none;
+}
+
+.sources a:hover {
   text-decoration: underline;
-  font-weight: 600;
 }
 
 /* ===== Оформление markdown внутри ответов бота ===== */
@@ -569,30 +555,25 @@ mark {
 .bubble em { font-style: italic; }
 .bubble ul, .bubble ol { margin: 6px 0 6px 18px; }
 .bubble li { margin-bottom: 3px; }
-.bubble a { color: var(--brand-blue); font-weight: 600; }
+.bubble a { color: var(--brand-b); }
 .bubble code {
-  background: rgba(22, 22, 29, 0.1);
+  background: rgba(0, 0, 0, 0.25);
   padding: 1px 5px;
   border-radius: 5px;
   font-size: 12.5px;
   font-family: 'SFMono-Regular', Consolas, monospace;
 }
-[data-theme="dark"] .bubble code {
-  background: rgba(255, 253, 247, 0.14);
-}
 .bubble pre {
-  background: var(--ink);
+  background: rgba(0, 0, 0, 0.3);
   padding: 10px 12px;
   border-radius: 10px;
   overflow-x: auto;
   margin: 8px 0;
   position: relative;
-  border: 2px solid var(--ink);
 }
 .bubble pre code {
   background: none;
   padding: 0;
-  color: #FFFDF7;
 }
 
 /* Блок кода с подсветкой синтаксиса (highlight.js) + кнопка "Копировать" */
@@ -603,27 +584,27 @@ mark {
   position: absolute;
   top: 6px;
   right: 6px;
-  background: var(--brand-green);
-  border: 1.5px solid #FFFDF7;
-  color: var(--ink);
-  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
   font-size: 11px;
   font-family: 'Inter', sans-serif;
   padding: 4px 9px;
   border-radius: 7px;
   cursor: pointer;
-  transition: transform 0.12s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 .code-copy-btn:hover {
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text-primary);
 }
 .bubble h1, .bubble h2, .bubble h3 {
-  font-family: 'Baloo 2', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   margin: 8px 0 6px 0;
-  font-size: 16px;
+  font-size: 15px;
 }
 .bubble blockquote {
-  border-left: 3px solid var(--brand-pink);
+  border-left: 2px solid var(--brand-a);
   padding-left: 10px;
   margin: 6px 0;
   color: var(--text-muted);
@@ -633,61 +614,8 @@ mark {
 .message-image {
   max-width: 220px;
   border-radius: 12px;
-  border: 2.5px solid var(--ink);
   margin-bottom: 6px;
   display: block;
-}
-
-/* Кнопка "озвучить" рядом с копированием */
-.speak-btn {
-  position: absolute;
-  top: -12px;
-  right: 40px;
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--ink);
-  border-radius: 7px;
-  background: var(--paper);
-  font-size: 11px;
-  color: var(--text-primary);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.message:hover .speak-btn {
-  opacity: 1;
-}
-
-/* Кнопка "перегенерировать ответ" — только у последнего ответа бота */
-.regenerate-btn {
-  position: absolute;
-  top: -12px;
-  right: 72px;
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--ink);
-  border-radius: 7px;
-  background: var(--paper);
-  font-size: 11px;
-  color: var(--text-primary);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.message:hover .regenerate-btn {
-  opacity: 1;
-}
-
-.regenerate-btn:active {
-  transform: rotate(-45deg);
 }
 
 /* ===== Превью прикреплённого изображения ===== */
@@ -696,7 +624,7 @@ mark {
   align-items: center;
   gap: 10px;
   padding: 10px 22px;
-  border-top: 3px solid var(--ink);
+  border-top: 1px solid var(--border-glass);
 }
 
 .image-preview img {
@@ -704,23 +632,22 @@ mark {
   height: 52px;
   object-fit: cover;
   border-radius: 10px;
-  border: 2.5px solid var(--ink);
 }
 
 .image-preview button {
   width: 26px;
   height: 26px;
-  border: 2px solid var(--ink);
+  border: none;
   border-radius: 50%;
-  background: var(--brand-pink);
-  color: #FFFDF7;
+  background: var(--bg-glass-strong);
+  color: var(--text-primary);
   cursor: pointer;
   font-size: 12px;
 }
 
 /* Микрофон: состояние "слушаю" */
 #micBtn.listening {
-  color: var(--brand-pink);
+  color: var(--brand-c);
   animation: micPulse 1s infinite ease-in-out;
 }
 
@@ -735,7 +662,7 @@ mark {
   align-items: center;
   gap: 10px;
   padding: 16px 22px;
-  border-top: 3.5px solid var(--ink);
+  border-top: 1px solid var(--border-glass);
   position: relative;
 }
 
@@ -745,8 +672,7 @@ mark {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: var(--paper);
-  border: 2.5px solid var(--ink);
+  background: var(--bg-glass-strong);
   border-radius: 24px;
   padding: 4px 6px 4px 8px;
 }
@@ -768,29 +694,26 @@ mark {
 }
 
 #sendButton {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   flex-shrink: 0;
-  border: 2.5px solid var(--ink);
+  border: none;
   border-radius: 50%;
-  background: var(--brand-pink);
-  color: #FFFDF7;
+  background: var(--brand-a);
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 3px 3px 0 var(--shadow-color);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition: filter 0.15s ease, transform 0.1s ease;
 }
 
 #sendButton:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--shadow-color);
+  filter: brightness(1.08);
 }
 
 #sendButton:active {
-  transform: translate(3px, 3px);
-  box-shadow: 0 0 0 var(--shadow-color);
+  transform: scale(0.94);
 }
 
 /* Эмодзи-панель */
@@ -798,14 +721,14 @@ mark {
   position: absolute;
   bottom: 68px;
   left: 22px;
-  background: var(--paper);
-  border: 2.5px solid var(--ink);
+  background: var(--bg-bubble-bot);
+  border: 1px solid var(--border-glass);
   border-radius: 14px;
   padding: 10px;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 4px;
-  box-shadow: 5px 5px 0 var(--shadow-color);
+  box-shadow: 0 10px 30px var(--shadow-app);
   z-index: 5;
 }
 
@@ -819,14 +742,14 @@ mark {
 }
 
 .emoji-popover button:hover {
-  background: var(--bg-page);
+  background: var(--bg-glass-strong);
 }
 
 /* ===== Модальное окно настроек ===== */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(22, 22, 29, 0.55);
+  background: rgba(5, 8, 14, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -835,17 +758,16 @@ mark {
 
 .modal {
   width: 320px;
-  background: var(--paper);
-  border: 3.5px solid var(--ink);
+  background: var(--bg-void);
+  border: 1px solid var(--border-glass);
   border-radius: 20px;
   padding: 24px;
-  box-shadow: 8px 8px 0 var(--shadow-color);
+  box-shadow: 0 30px 70px var(--shadow-app);
 }
 
 .modal h2 {
-  font-family: 'Baloo 2', sans-serif;
-  font-weight: 700;
-  font-size: 21px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 19px;
   color: var(--text-primary);
   margin-bottom: 18px;
 }
@@ -855,7 +777,6 @@ mark {
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
-  font-weight: 600;
   color: var(--text-muted);
   margin-bottom: 16px;
 }
@@ -864,8 +785,8 @@ mark {
 .field input[type="password"] {
   padding: 10px 12px;
   border-radius: 10px;
-  border: 2.5px solid var(--ink);
-  background: var(--paper);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass-strong);
   color: var(--text-primary);
   font-size: 14px;
   outline: none;
@@ -875,8 +796,8 @@ mark {
 .field select {
   padding: 10px 12px;
   border-radius: 10px;
-  border: 2.5px solid var(--ink);
-  background: var(--paper);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass-strong);
   color: var(--text-primary);
   font-size: 14px;
   outline: none;
@@ -890,46 +811,31 @@ mark {
 }
 
 .checkbox-field input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--brand-pink);
+  width: 16px;
+  height: 16px;
 }
 
 .primary-btn,
 .danger-btn {
   width: 100%;
   padding: 11px;
-  border: 2.5px solid var(--ink);
+  border: none;
   border-radius: 12px;
-  font-family: 'Inter', sans-serif;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   margin-top: 4px;
-  box-shadow: 3px 3px 0 var(--shadow-color);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.primary-btn:hover,
-.danger-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--shadow-color);
-}
-
-.primary-btn:active,
-.danger-btn:active {
-  transform: translate(3px, 3px);
-  box-shadow: 0 0 0 var(--shadow-color);
 }
 
 .primary-btn {
-  background: var(--brand-blue);
-  color: #FFFDF7;
+  background: var(--brand-a);
+  color: #fff;
 }
 
 .danger-btn {
-  background: var(--paper);
-  color: var(--brand-pink);
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  color: #FF8A94;
   margin-bottom: 10px;
 }
 
@@ -938,8 +844,7 @@ mark {
   display: flex;
   gap: 6px;
   margin-bottom: 18px;
-  background: var(--bg-page);
-  border: 2.5px solid var(--ink);
+  background: var(--bg-glass-strong);
   border-radius: 12px;
   padding: 4px;
 }
@@ -950,23 +855,22 @@ mark {
   border: none;
   background: transparent;
   border-radius: 9px;
-  color: var(--text-primary);
+  color: var(--text-muted);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
 }
 
 .auth-tab.active {
-  background: var(--brand-blue);
-  color: #FFFDF7;
+  background: var(--brand-a);
+  color: #fff;
 }
 
 .auth-error {
-  background: var(--brand-pink);
-  border: 2px solid var(--ink);
-  color: #FFFDF7;
-  font-weight: 600;
+  background: rgba(255, 92, 92, 0.12);
+  border: 1px solid rgba(255, 92, 92, 0.35);
+  color: #FF8A94;
   font-size: 13px;
   padding: 8px 10px;
   border-radius: 10px;
@@ -975,10 +879,53 @@ mark {
 
 .auth-hint {
   font-size: 12px;
-  font-weight: 400;
   color: var(--text-muted);
   line-height: 1.5;
   margin: -6px 0 14px;
+}
+
+/* ===== Закладки ===== */
+.bookmarks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+}
+
+.bookmark-item {
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  position: relative;
+  cursor: default;
+}
+
+.bookmark-item .bookmark-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.bookmark-item .bookmark-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.bookmark-item .bookmark-remove:hover {
+  color: var(--brand-c);
 }
 
 /* Подсказка, стоящая отдельно от поля ввода (не под ним, а под формой/кнопкой) —
@@ -989,7 +936,6 @@ mark {
 
 .auth-current-user {
   font-size: 14px;
-  font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 6px;
 }
@@ -1000,16 +946,14 @@ mark {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--ink);
-  color: var(--paper);
-  border: 2.5px solid var(--ink);
+  background: var(--bg-void);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
   padding: 10px 18px;
   border-radius: 10px;
-  font-weight: 600;
   font-size: 13px;
   z-index: 20;
   opacity: 0;
-  box-shadow: 4px 4px 0 var(--shadow-color);
   transition: opacity 0.25s ease;
 }
 
@@ -1035,8 +979,6 @@ mark {
     height: var(--app-height, 100dvh);
     max-width: 100%;
     border-radius: 0;
-    border-width: 0 0 0 0;
-    box-shadow: none;
     flex-direction: column;
   }
 
@@ -1052,7 +994,7 @@ mark {
     padding-right: max(14px, env(safe-area-inset-right));
     gap: 6px;
     border-right: none;
-    border-bottom: 3.5px solid var(--ink);
+    border-bottom: 1px solid var(--border-glass);
   }
 
   .rail .logo-badge--sm {
@@ -1107,7 +1049,7 @@ mark {
   }
 
   .identity-text h1 {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .chat-messages {
@@ -1154,7 +1096,7 @@ mark {
   }
 
   .hero h2 {
-    font-size: 21px;
+    font-size: 20px;
   }
 
   .hero p {
@@ -1190,7 +1132,7 @@ mark {
   }
 
   .hero h2 {
-    font-size: 19px;
+    font-size: 18px;
   }
 }
 
@@ -1213,7 +1155,7 @@ mark {
     display: none;
   }
 
-  .suggested-prompts {
+  .chips {
     display: none;
   }
 }
