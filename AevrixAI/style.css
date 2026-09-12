@@ -615,6 +615,17 @@ mark {
   display: block;
 }
 
+/* Сгенерированная ботом картинка (Pollinations) — крупнее, чем маленькое
+   превью прикреплённого фото, так как это основной результат ответа */
+.generated-image {
+  max-width: 360px;
+  width: 100%;
+  border-radius: 14px;
+  margin-top: 10px;
+  display: block;
+  border: 1px solid var(--border-glass);
+}
+
 /* ===== Превью прикреплённого изображения ===== */
 .image-preview {
   display: flex;
