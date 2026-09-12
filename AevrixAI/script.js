@@ -34,6 +34,21 @@ const searchCount = document.getElementById('searchCount');
 
 const clearBtn = document.getElementById('clearBtn');
 
+const bookmarksBtn = document.getElementById('bookmarksBtn');
+const bookmarksOverlay = document.getElementById('bookmarksOverlay');
+const bookmarksList = document.getElementById('bookmarksList');
+const bookmarksEmptyHint = document.getElementById('bookmarksEmptyHint');
+const closeBookmarksBtn = document.getElementById('closeBookmarksBtn');
+
+const shareBtn = document.getElementById('shareBtn');
+const shareOverlay = document.getElementById('shareOverlay');
+const shareLinkInput = document.getElementById('shareLinkInput');
+const copyShareLinkBtn = document.getElementById('copyShareLinkBtn');
+const closeShareBtn = document.getElementById('closeShareBtn');
+
+const sharedBanner = document.getElementById('sharedBanner');
+const exitSharedBtn = document.getElementById('exitSharedBtn');
+
 const emojiBtn = document.getElementById('emojiBtn');
 const emojiPopover = document.getElementById('emojiPopover');
 const attachBtn = document.getElementById('attachBtn');
@@ -47,9 +62,6 @@ const micBtn = document.getElementById('micBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsOverlay = document.getElementById('settingsOverlay');
 const botNameInput = document.getElementById('botNameInput');
-const showTimestampsCheckbox = document.getElementById('showTimestamps');
-const showVoiceOutputCheckbox = document.getElementById('showVoiceOutput');
-const toneSelect = document.getElementById('toneSelect');
 const resetChatBtn = document.getElementById('resetChatBtn');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 
@@ -76,10 +88,7 @@ const closeAccountBtn = document.getElementById('closeAccountBtn');
 /* ===== Настройки (сохраняются в браузере) ===== */
 
 let settings = {
-  botName: localStorage.getItem('chatbot-name') || 'Aevrix Ai',
-  showTimestamps: localStorage.getItem('chatbot-timestamps') !== 'off',
-  voiceOutput: localStorage.getItem('chatbot-voice') === 'on',
-  tone: localStorage.getItem('chatbot-tone') || 'neutral'
+  botName: localStorage.getItem('chatbot-name') || 'Aevrix Ai'
 };
 
 // Если имя бота заканчивается на "Ai" — красиво выделяем это градиентом
@@ -101,7 +110,6 @@ function renderBrandedName(el, name) {
 function applySettingsToUI() {
   renderBrandedName(botNameEl, settings.botName);
   renderBrandedName(heroNameEl, settings.botName);
-  chatMessages.classList.toggle('hide-timestamps', !settings.showTimestamps);
 }
 
 applySettingsToUI();
@@ -119,6 +127,7 @@ const ICON_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M9 16v2a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2h-2"/></svg>';
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9a4 4 0 0 1 0 6"/><path d="M19 7a7.5 7.5 0 0 1 0 10"/></svg>';
 const ICON_REGENERATE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11A8 8 0 1 0 18.5 16"/><path d="M20 5v6h-6"/></svg>';
+const ICON_PIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1z"/></svg>';
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
@@ -216,6 +225,82 @@ function clearStoredMessages() {
 }
 
 /* =====================================================================
+   ЗАКЛАДКИ — отметить важный ответ, чтобы не потерять его в длинной
+   истории. Хранится локально в браузере (не привязано к аккаунту).
+   ===================================================================== */
+
+const BOOKMARKS_KEY = 'chatbot-bookmarks';
+
+function loadBookmarks() {
+  try {
+    const raw = localStorage.getItem(BOOKMARKS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveBookmarks(list) {
+  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(list));
+}
+
+function togglePin(messageDiv, sender, timestampText, pinBtn) {
+  const text = messageDiv.dataset.rawText || '';
+  if (!text) return;
+
+  const bookmarks = loadBookmarks();
+  const existingIndex = bookmarks.findIndex((b) => b.text === text && b.timestamp === timestampText);
+
+  if (existingIndex >= 0) {
+    bookmarks.splice(existingIndex, 1);
+    pinBtn.classList.remove('pinned');
+    showToast('Убрано из закладок');
+  } else {
+    bookmarks.push({ text, sender, timestamp: timestampText, addedAt: Date.now() });
+    pinBtn.classList.add('pinned');
+    showToast('Добавлено в закладки');
+  }
+  saveBookmarks(bookmarks);
+}
+
+function renderBookmarksList() {
+  const bookmarks = loadBookmarks();
+  bookmarksList.innerHTML = '';
+  bookmarksEmptyHint.hidden = bookmarks.length > 0;
+
+  bookmarks
+    .slice()
+    .reverse()
+    .forEach((b) => {
+      const item = document.createElement('div');
+      item.classList.add('bookmark-item');
+
+      const meta = document.createElement('span');
+      meta.classList.add('bookmark-meta');
+      meta.textContent = `${b.sender === 'user' ? 'Ты' : settings.botName} · ${b.timestamp || ''}`;
+      item.appendChild(meta);
+
+      const textEl = document.createElement('div');
+      textEl.textContent = b.text;
+      item.appendChild(textEl);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.classList.add('bookmark-remove');
+      removeBtn.innerHTML = '&times;';
+      removeBtn.title = 'Убрать из закладок';
+      removeBtn.addEventListener('click', () => {
+        const updated = loadBookmarks().filter((x) => !(x.text === b.text && x.timestamp === b.timestamp));
+        saveBookmarks(updated);
+        renderBookmarksList();
+      });
+      item.appendChild(removeBtn);
+
+      bookmarksList.appendChild(item);
+    });
+}
+
+/* =====================================================================
    БОЛЬШАЯ БАЗА "БОЛТАЛКИ" — мгновенные ответы без обращения к Gemini
    ===================================================================== */
 
@@ -309,6 +394,7 @@ function startConversation() {
   if (!heroSection.hidden) {
     heroSection.hidden = true;
     chatMessages.hidden = false;
+    if (chatPanelEl) chatPanelEl.classList.add('chat-active');
     addMessage(`Привет! Я ${settings.botName} 🌟 Чем могу помочь?`, 'bot');
   }
 }
@@ -317,6 +403,7 @@ function showHero() {
   chatMessages.hidden = true;
   chatMessages.innerHTML = '';
   heroSection.hidden = false;
+  if (chatPanelEl) chatPanelEl.classList.remove('chat-active');
   conversationHistory = [];
 }
 
@@ -389,12 +476,22 @@ function addMessage(text, sender, { sources = [], imageUrl = null, save = true }
     body.appendChild(sourcesBlock);
   }
 
+  // Нижняя строка сообщения: время (всегда видно) + панель действий
+  // (появляется при наведении) — вместо старых кнопок поверх пузыря,
+  // которого в этом дизайне больше нет.
+  const footer = document.createElement('div');
+  footer.classList.add('message-footer');
+
   const timestamp = document.createElement('span');
   timestamp.classList.add('timestamp');
   timestamp.textContent = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  body.appendChild(timestamp);
+  footer.appendChild(timestamp);
+
+  const actions = document.createElement('div');
+  actions.classList.add('message-actions');
 
   const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
   copyBtn.classList.add('copy-btn');
   copyBtn.innerHTML = ICON_COPY;
   copyBtn.title = 'Скопировать';
@@ -404,17 +501,30 @@ function addMessage(text, sender, { sources = [], imageUrl = null, save = true }
     // того как этот блок выполнился.
     navigator.clipboard.writeText(messageDiv.dataset.rawText || '').then(() => showToast('Скопировано в буфер обмена'));
   });
-  messageDiv.appendChild(body);
-  messageDiv.appendChild(copyBtn);
+  actions.appendChild(copyBtn);
 
   if (sender === 'bot' && 'speechSynthesis' in window) {
     const speakBtn = document.createElement('button');
+    speakBtn.type = 'button';
     speakBtn.classList.add('speak-btn');
     speakBtn.innerHTML = ICON_SPEAKER;
     speakBtn.title = 'Озвучить';
     speakBtn.addEventListener('click', () => speakText(messageDiv.dataset.rawText || ''));
-    messageDiv.appendChild(speakBtn);
+    actions.appendChild(speakBtn);
   }
+
+  const pinBtn = document.createElement('button');
+  pinBtn.type = 'button';
+  pinBtn.classList.add('pin-btn');
+  pinBtn.innerHTML = ICON_PIN;
+  pinBtn.title = 'Добавить в закладки';
+  pinBtn.addEventListener('click', () => togglePin(messageDiv, sender, timestamp.textContent, pinBtn));
+  actions.appendChild(pinBtn);
+
+  footer.appendChild(actions);
+  body.appendChild(footer);
+
+  messageDiv.appendChild(body);
 
   chatMessages.appendChild(messageDiv);
   chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -426,24 +536,97 @@ function addMessage(text, sender, { sources = [], imageUrl = null, save = true }
   return messageDiv;
 }
 
-function showTypingIndicator() {
-  const messageDiv = document.createElement('div');
-  messageDiv.classList.add('message', 'bot-message');
-  messageDiv.id = 'typingIndicator';
+/* =====================================================================
+   ВОЛНА-СИГНАЛ — визуальное состояние Aevrix вместо точек "печатает...".
+   idle — готов, thinking — обрабатывает запрос, speaking — стримит ответ.
+   ===================================================================== */
 
-  const bubble = document.createElement('div');
-  bubble.classList.add('bubble', 'typing-bubble');
-  bubble.innerHTML = '<span></span><span></span><span></span>';
+const waveCanvas = document.getElementById('waveCanvas');
+const waveCtx = waveCanvas ? waveCanvas.getContext('2d') : null;
+const chatPanelEl = document.querySelector('.chat-panel');
+const statusTextEl = document.querySelector('.status');
 
-  messageDiv.appendChild(bubble);
-  chatMessages.appendChild(messageDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+let waveMode = 'idle';
+let waveT = 0;
+let waveDpr = window.devicePixelRatio || 1;
+let waveW = 0;
+let waveH = 0;
+
+function resizeWaveCanvas() {
+  if (!waveCanvas) return;
+  const rect = waveCanvas.getBoundingClientRect();
+  waveW = rect.width;
+  waveH = rect.height;
+  waveCanvas.width = waveW * waveDpr;
+  waveCanvas.height = waveH * waveDpr;
+  waveCtx.setTransform(waveDpr, 0, 0, waveDpr, 0, 0);
 }
 
-function removeTypingIndicator() {
-  const el = document.getElementById('typingIndicator');
-  if (el) el.remove();
+window.addEventListener('resize', resizeWaveCanvas);
+
+// CSS-переход меняет ВИЗУАЛЬНУЮ высоту .wave-wrap (130px → 56px при начале
+// разговора), но канвас сам по себе не знает об этом — пересчитываем его
+// внутренний размер, когда переход закончится, иначе волна будет выглядеть
+// сжатой/растянутой вместо аккуратной подгонки под новую высоту.
+document.getElementById('waveWrap')?.addEventListener('transitionend', (e) => {
+  if (e.propertyName === 'height') resizeWaveCanvas();
+});
+
+function drawWave() {
+  if (!waveCtx || waveW === 0) {
+    requestAnimationFrame(drawWave);
+    return;
+  }
+  waveCtx.clearRect(0, 0, waveW, waveH);
+  const midY = waveH / 2;
+  const points = 120;
+
+  waveCtx.beginPath();
+  for (let i = 0; i <= points; i++) {
+    const x = (i / points) * waveW;
+    let y = midY;
+
+    if (waveMode === 'idle') {
+      y += Math.sin(i * 0.25 + waveT * 0.03) * (waveH * 0.09);
+    } else if (waveMode === 'thinking') {
+      y += Math.sin(i * 0.5 + waveT * 0.15) * (waveH * 0.18)
+         + Math.sin(i * 1.3 + waveT * 0.22) * (waveH * 0.08)
+         + (Math.random() - 0.5) * (waveH * 0.05);
+    } else if (waveMode === 'speaking') {
+      y += Math.sin(i * 0.3 + waveT * 0.05) * (waveH * 0.14)
+         + Math.sin(i * 0.9 - waveT * 0.04) * (waveH * 0.05);
+    } else if (waveMode === 'easter') {
+      // Пасхалка: волна закручивается в спираль на пару секунд
+      y += Math.sin(i * 0.7 + waveT * 0.3) * (waveH * 0.22) * Math.sin(waveT * 0.05);
+    }
+
+    if (i === 0) waveCtx.moveTo(x, y);
+    else waveCtx.lineTo(x, y);
+  }
+
+  waveCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--brand-a').trim() || '#39FF88';
+  waveCtx.lineWidth = 1.6;
+  waveCtx.shadowColor = waveCtx.strokeStyle;
+  waveCtx.shadowBlur = waveMode === 'thinking' || waveMode === 'easter' ? 10 : 5;
+  waveCtx.globalAlpha = waveMode === 'idle' ? 0.7 : 0.9;
+  waveCtx.stroke();
+  waveCtx.globalAlpha = 1;
+
+  waveT += 1;
+  requestAnimationFrame(drawWave);
 }
+
+function setWaveMode(mode) {
+  waveMode = mode;
+  if (!statusTextEl) return;
+  if (mode === 'thinking') statusTextEl.textContent = 'думает';
+  else if (mode === 'speaking') statusTextEl.textContent = 'отвечает';
+  else if (mode === 'easter') statusTextEl.textContent = 'частота настроена 📡';
+  else statusTextEl.textContent = 'готов помочь';
+}
+
+resizeWaveCanvas();
+drawWave();
 
 /* ===== Восстановление переписки при открытии страницы ===== */
 
@@ -453,6 +636,7 @@ function restoreConversation() {
 
   heroSection.hidden = true;
   chatMessages.hidden = false;
+  if (chatPanelEl) chatPanelEl.classList.add('chat-active');
 
   let lastBotDiv = null;
   let lastUserText = '';
@@ -485,6 +669,7 @@ async function restoreConversationFromServer() {
 
     heroSection.hidden = true;
     chatMessages.hidden = false;
+    if (chatPanelEl) chatPanelEl.classList.add('chat-active');
 
     let lastBotDiv = null;
     let lastUserText = '';
@@ -663,7 +848,11 @@ logoutBtn.addEventListener('click', async () => {
   showToast('Вышел из аккаунта');
 });
 
-checkAuthAndRestoreHistory();
+// Если открыта публичная read-only ссылка (?shared=...) — показываем
+// только её и не трогаем аккаунт/личную историю пользователя.
+if (!tryRenderSharedConversation()) {
+  checkAuthAndRestoreHistory();
+}
 
 /* ===== Запасной ответ, если сервер/API недоступны ===== */
 
@@ -695,8 +884,7 @@ async function streamAskServer(userText, image, onDelta, onDone, onError) {
       body: JSON.stringify({
         message: userText,
         history: conversationHistory,
-        image: image || null,
-        tone: settings.tone
+        image: image || null
       }),
       signal: controller.signal
     });
@@ -780,7 +968,7 @@ async function requestBotReply(text, imageToSend, { isRegenerate = false } = {})
   // убираем её у всех предыдущих, чтобы не путать пользователя нерабочими кнопками.
   chatMessages.querySelectorAll('.regenerate-btn').forEach((btn) => btn.remove());
 
-  showTypingIndicator();
+  setWaveMode('thinking');
 
   let botMessageDiv = null;
   let bubble = null;
@@ -791,7 +979,7 @@ async function requestBotReply(text, imageToSend, { isRegenerate = false } = {})
     imageToSend,
     (delta) => {
       if (!botMessageDiv) {
-        removeTypingIndicator();
+        setWaveMode('speaking');
         botMessageDiv = addMessage('', 'bot', { save: false });
         bubble = botMessageDiv.querySelector('.bubble');
       }
@@ -802,7 +990,7 @@ async function requestBotReply(text, imageToSend, { isRegenerate = false } = {})
       chatMessages.scrollTop = chatMessages.scrollHeight;
     },
     (payload) => {
-      removeTypingIndicator();
+      setWaveMode('idle');
       const sources = payload.sources || [];
 
       if (!botMessageDiv) {
@@ -836,13 +1024,12 @@ async function requestBotReply(text, imageToSend, { isRegenerate = false } = {})
       if (!isRegenerate) pushToHistory('user', text || 'Изображение');
       pushToHistory('model', accumulated);
 
-      if (settings.voiceOutput) speakText(accumulated);
       sendButton.disabled = false;
       userInput.focus();
     },
     (err) => {
       console.error(err);
-      removeTypingIndicator();
+      setWaveMode('idle');
       if (botMessageDiv) botMessageDiv.remove(); // убираем недописанный пузырь
 
       if (err.isTimeout) {
@@ -866,6 +1053,8 @@ async function requestBotReply(text, imageToSend, { isRegenerate = false } = {})
 // порядок истории разговора).
 function attachRegenerateButton(messageDiv, userText, userImage) {
   if (!messageDiv || messageDiv.querySelector('.regenerate-btn')) return;
+  const actions = messageDiv.querySelector('.message-actions');
+  if (!actions) return;
 
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -873,7 +1062,7 @@ function attachRegenerateButton(messageDiv, userText, userImage) {
   btn.innerHTML = ICON_REGENERATE;
   btn.title = 'Перегенерировать ответ';
   btn.addEventListener('click', () => regenerateResponse(messageDiv, userText, userImage));
-  messageDiv.appendChild(btn);
+  actions.appendChild(btn);
 }
 
 async function regenerateResponse(messageDiv, userText, userImage) {
@@ -898,26 +1087,70 @@ async function regenerateResponse(messageDiv, userText, userImage) {
   await requestBotReply(userText, userImage, { isRegenerate: true });
 }
 
+/* =====================================================================
+   СЛЭШ-КОМАНДЫ — быстрые шорткаты для частых форматов ответа.
+   /код, /перевод, /кратко (+ англ. алиасы /code /translate /summarize)
+   ===================================================================== */
+
+function parseSlashCommand(rawText) {
+  const match = rawText.match(/^\/(\S+)\s*([\s\S]*)$/);
+  if (!match) return { displayText: rawText, apiText: rawText };
+
+  const command = match[1].toLowerCase();
+  const rest = match[2].trim();
+
+  const wrap = (instruction) => ({
+    displayText: rawText,
+    apiText: rest ? `${instruction}: ${rest}` : instruction
+  });
+
+  if (['код', 'code'].includes(command)) {
+    return wrap('Ответь только кодом с кратким пояснением после блока кода, без длинного вступления, на запрос');
+  }
+  if (['перевод', 'translate'].includes(command)) {
+    return wrap(
+      'Переведи следующий текст (если он на русском — переведи на английский, если на любом другом языке — переведи на русский), выведи только перевод'
+    );
+  }
+  if (['кратко', 'summarize', 'summary'].includes(command)) {
+    return wrap('Сделай краткое содержание в 3-5 предложениях следующего текста');
+  }
+
+  return { displayText: rawText, apiText: rawText };
+}
+
 async function sendMessage() {
-  const text = userInput.value.trim();
-  if (text === '' && !pendingImage) return;
+  const rawText = userInput.value.trim();
+  if (rawText === '' && !pendingImage) return;
+
+  // Пасхалка: секретная команда, ничего не отправляет на сервер
+  if (rawText.toLowerCase() === '/частота') {
+    userInput.value = '';
+    setWaveMode('easter');
+    showToast('📡 Частота настроена...');
+    setTimeout(() => setWaveMode('idle'), 2200);
+    return;
+  }
 
   startConversation();
 
   const imageToSend = pendingImage;
-  addMessage(text || '📷 Изображение', 'user', { imageUrl: imageToSend ? imageToSend.previewUrl : null });
+  const { displayText, apiText } = imageToSend ? { displayText: rawText, apiText: rawText } : parseSlashCommand(rawText);
+
+  addMessage(displayText || '📷 Изображение', 'user', { imageUrl: imageToSend ? imageToSend.previewUrl : null });
   userInput.value = '';
   clearPendingImage();
   sendButton.disabled = true;
 
   // Локальную "болталку" проверяем только если нет прикреплённого изображения
-  const localReply = imageToSend ? null : getLocalReply(text);
+  // и это не слэш-команда (иначе "/код привет" сработает как обычное "привет")
+  const localReply = imageToSend || apiText !== displayText ? null : getLocalReply(displayText);
 
   if (localReply) {
-    pushToHistory('user', text);
-    showTypingIndicator();
+    pushToHistory('user', displayText);
+    setWaveMode('thinking');
     setTimeout(() => {
-      removeTypingIndicator();
+      setWaveMode('idle');
       addMessage(localReply, 'bot');
       pushToHistory('model', localReply);
       sendButton.disabled = false;
@@ -926,7 +1159,7 @@ async function sendMessage() {
     return;
   }
 
-  await requestBotReply(text, imageToSend);
+  await requestBotReply(apiText, imageToSend);
 }
 
 sendButton.addEventListener('click', sendMessage);
@@ -1121,23 +1354,13 @@ document.addEventListener('click', (e) => {
 
 settingsBtn.addEventListener('click', () => {
   botNameInput.value = settings.botName;
-  showTimestampsCheckbox.checked = settings.showTimestamps;
-  showVoiceOutputCheckbox.checked = settings.voiceOutput;
-  toneSelect.value = settings.tone;
   settingsOverlay.hidden = false;
 });
 
 closeSettingsBtn.addEventListener('click', () => {
   const newName = botNameInput.value.trim() || 'Aevrix Ai';
   settings.botName = newName;
-  settings.showTimestamps = showTimestampsCheckbox.checked;
-  settings.voiceOutput = showVoiceOutputCheckbox.checked;
-  settings.tone = toneSelect.value;
-
   localStorage.setItem('chatbot-name', settings.botName);
-  localStorage.setItem('chatbot-timestamps', settings.showTimestamps ? 'on' : 'off');
-  localStorage.setItem('chatbot-voice', settings.voiceOutput ? 'on' : 'off');
-  localStorage.setItem('chatbot-tone', settings.tone);
 
   applySettingsToUI();
   settingsOverlay.hidden = true;
@@ -1154,3 +1377,98 @@ resetChatBtn.addEventListener('click', () => {
 settingsOverlay.addEventListener('click', (e) => {
   if (e.target === settingsOverlay) settingsOverlay.hidden = true;
 });
+
+/* ===== Закладки ===== */
+
+bookmarksBtn.addEventListener('click', () => {
+  renderBookmarksList();
+  bookmarksOverlay.hidden = false;
+});
+
+closeBookmarksBtn.addEventListener('click', () => {
+  bookmarksOverlay.hidden = true;
+});
+
+bookmarksOverlay.addEventListener('click', (e) => {
+  if (e.target === bookmarksOverlay) bookmarksOverlay.hidden = true;
+});
+
+/* =====================================================================
+   ПОДЕЛИТЬСЯ РАЗГОВОРОМ — целиком на клиенте, без сервера: весь текущий
+   разговор (conversationHistory) кодируется в base64 и кладётся в URL как
+   ?shared=... . По этой ссылке разговор открывается в режиме "только
+   чтение" — без входа в аккаунт, без возможности писать новые сообщения.
+   Плюс: ничего не нужно хранить на сервере. Минус: длинный разговор даёт
+   длинную ссылку.
+   ===================================================================== */
+
+function encodeSharedConversation(history) {
+  const json = JSON.stringify(history);
+  // encodeURIComponent + unescape — надёжный способ закодировать в base64
+  // произвольный юникод-текст (кириллицу и т.п.), не только ASCII.
+  return btoa(unescape(encodeURIComponent(json)));
+}
+
+function decodeSharedConversation(encoded) {
+  const json = decodeURIComponent(escape(atob(encoded)));
+  return JSON.parse(json);
+}
+
+shareBtn.addEventListener('click', () => {
+  if (conversationHistory.length === 0) {
+    showToast('Сначала напиши что-нибудь боту — потом можно будет поделиться');
+    return;
+  }
+  const encoded = encodeSharedConversation(conversationHistory);
+  const url = `${location.origin}${location.pathname}?shared=${encoded}`;
+  shareLinkInput.value = url;
+  shareOverlay.hidden = false;
+});
+
+closeShareBtn.addEventListener('click', () => {
+  shareOverlay.hidden = true;
+});
+
+shareOverlay.addEventListener('click', (e) => {
+  if (e.target === shareOverlay) shareOverlay.hidden = true;
+});
+
+copyShareLinkBtn.addEventListener('click', () => {
+  shareLinkInput.select();
+  navigator.clipboard.writeText(shareLinkInput.value).then(() => showToast('Ссылка скопирована'));
+});
+
+exitSharedBtn.addEventListener('click', () => {
+  location.href = location.origin + location.pathname;
+});
+
+// При загрузке страницы: если в URL есть ?shared=... — показываем
+// разговор в режиме "только чтение" вместо обычного чата.
+function tryRenderSharedConversation() {
+  const params = new URLSearchParams(location.search);
+  const encoded = params.get('shared');
+  if (!encoded) return false;
+
+  try {
+    const history = decodeSharedConversation(encoded);
+    if (!Array.isArray(history) || history.length === 0) return false;
+
+    sharedBanner.hidden = false;
+    heroSection.hidden = true;
+    chatMessages.hidden = false;
+    if (chatPanelEl) chatPanelEl.classList.add('chat-active');
+    document.querySelector('.chat-input-area')?.setAttribute('hidden', '');
+    document.querySelector('.rail')?.setAttribute('hidden', '');
+    document.querySelector('.header-actions')?.setAttribute('hidden', '');
+
+    history.forEach((msg) => {
+      const text = msg?.parts?.[0]?.text || '';
+      if (!text) return;
+      addMessage(text, msg.role === 'user' ? 'user' : 'bot', { save: false });
+    });
+    return true;
+  } catch (err) {
+    console.error('Не удалось разобрать публичную ссылку:', err);
+    return false;
+  }
+}
