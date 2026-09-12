@@ -1015,6 +1015,17 @@ async function requestBotReply(text, imageToSend, { isRegenerate = false } = {})
           bubble.insertAdjacentElement('afterend', sourcesBlock);
         }
 
+        // Сгенерированное изображение (Pollinations) — вставляем картинкой
+        // прямо в сообщение, до строки времени/действий
+        if (payload.imageUrl) {
+          const genImg = document.createElement('img');
+          genImg.src = payload.imageUrl;
+          genImg.alt = text;
+          genImg.classList.add('message-image', 'generated-image');
+          genImg.loading = 'lazy';
+          bubble.insertAdjacentElement('afterend', genImg);
+        }
+
         const timestampEl = botMessageDiv.querySelector('.timestamp');
         saveMessageToStorage({ sender: 'bot', text: accumulated, sources, timestamp: timestampEl?.textContent });
       }
