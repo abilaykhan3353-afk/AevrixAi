@@ -1,0 +1,1169 @@
+:root {
+  /* ===== Палитра «Сигнал» ===== */
+  --bg-void: #0A0B0D;              /* фон приложения — глубокий, но не чистый чёрный */
+  --bg-glass: #121417;             /* поверхность приложения (плоская, без стекла) */
+  --bg-glass-strong: #1C1F23;      /* поверхность при hover/active */
+  --bg-bubble-bot: #15171A;        /* фон для блоков кода/цитат внутри сообщений */
+  --border-glass: rgba(255, 255, 255, 0.09);
+  --text-primary: #EAEAE6;         /* тёплый белый, не чистый #FFF */
+  --text-muted: #85888D;
+  --shadow-app: rgba(0, 0, 0, 0.6);
+  --brand-a: #39FF88;              /* единственный акцент — сигнальный зелёный */
+  --brand-b: #1FAA5C;              /* приглушённый вариант акцента (ссылки, второстепенное) */
+  --brand-c: #FF5C5C;              /* тёплый акцент для "активных" состояний (запись голоса) */
+}
+
+[data-theme="light"] {
+  --bg-void: #F3F3EF;
+  --bg-glass: #FFFFFF;
+  --bg-glass-strong: #ECECE7;
+  --bg-bubble-bot: #F7F7F4;
+  --border-glass: rgba(10, 11, 13, 0.10);
+  --text-primary: #14161A;
+  --text-muted: #6B6E73;
+  --shadow-app: rgba(20, 20, 20, 0.15);
+  --brand-a: #0F9D58;              /* более глубокий зелёный — контраст на светлом фоне */
+  --brand-b: #0B7A43;
+  --brand-c: #D64545;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+/* Важно: гарантируем, что hidden всегда скрывает элемент,
+   даже если у него отдельно задан display: flex/grid */
+[hidden] {
+  display: none !important;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-void);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow: hidden;
+  overscroll-behavior-y: contain;
+  position: relative;
+  transition: background 0.3s ease;
+}
+
+/* Фоновые декоративные пятна убраны — концепция «Сигнал» использует
+   плоский тёмный фон и единственный акцент (волну), без свечения/ауроры. */
+
+/* ===== Иконки (SVG вместо эмодзи) ===== */
+.rail-btn svg,
+.header-actions button svg,
+.icon-btn svg,
+.image-preview button svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.theme-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+#sendButton svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+  margin: 0 auto;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 760px;
+  height: 700px;
+  display: flex;
+  border-radius: 28px;
+  overflow: hidden;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 40px 90px var(--shadow-app);
+}
+
+/* ===== Боковая панель ===== */
+.rail {
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  gap: 10px;
+  border-right: 1px solid var(--border-glass);
+}
+
+.logo-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.logo-badge--sm {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 14px;
+}
+
+.rail-btn {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.rail-btn:hover {
+  background: var(--bg-glass-strong);
+}
+
+.rail-bottom {
+  margin-top: auto;
+}
+
+/* ===== Панель чата ===== */
+.chat-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Баннер публичного read-only просмотра расшаренного разговора */
+.shared-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  background: var(--bg-glass-strong);
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.shared-banner button {
+  background: none;
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.header-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.identity-text {
+  min-width: 0;
+}
+
+.identity-text h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brand-ai {
+  background: var(--brand-a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.status {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.header-actions button,
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.header-actions button:hover,
+.icon-btn:hover {
+  background: var(--bg-glass-strong);
+}
+
+#accountBtn.logged-in {
+  position: relative;
+  color: var(--text-primary);
+}
+
+#accountBtn.logged-in::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand-a);
+  border: 1.5px solid var(--bg-void);
+}
+
+/* ===== Поиск ===== */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 22px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.search-bar input {
+  flex: 1;
+  border: none;
+  background: var(--bg-glass-strong);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13.5px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.search-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ===== Экран приветствия ===== */
+/* ===== Волна-сигнал: визуальное состояние Aevrix (готов/думает/отвечает) ===== */
+.wave-wrap {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 130px;
+  transition: height 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chat-panel.chat-active .wave-wrap {
+  height: 56px;
+}
+
+#waveCanvas {
+  width: 100%;
+  max-width: 460px;
+  height: 100%;
+  display: block;
+}
+
+.hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 32px;
+  gap: 14px;
+}
+
+.hero h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  color: var(--text-primary);
+}
+
+.hero p {
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 340px;
+  line-height: 1.5;
+}
+
+/* Подсказки-примеры на экране приветствия */
+.suggested-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 420px;
+  margin-top: 4px;
+}
+
+.suggested-prompt-btn {
+  background: none;
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.suggested-prompt-btn:hover {
+  border-color: var(--brand-a);
+  transform: translateY(-1px);
+}
+
+/* ===== Сообщения ===== */
+.chat-messages {
+  flex: 1;
+  min-height: 0;
+  padding: 22px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: var(--border-glass);
+  border-radius: 10px;
+}
+
+.message {
+  display: flex;
+  max-width: 82%;
+  animation: riseIn 0.25s ease;
+  position: relative;
+}
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message.hidden-by-search {
+  display: none;
+}
+
+.message-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Сообщения — типографика, без фона/рамки/пузыря. Бот и пользователь
+   различаются шрифтом и выравниванием, а не цветными "коробками". */
+.bubble {
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 15.5px;
+  line-height: 1.6;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.message-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 7px;
+  padding: 0 1px;
+}
+
+.timestamp {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.bot-message {
+  align-self: flex-start;
+}
+
+.bot-message .bubble {
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-weight: 450;
+}
+
+.user-message {
+  align-self: flex-end;
+}
+
+.user-message .message-body {
+  align-items: flex-end;
+}
+
+.user-message .message-footer {
+  flex-direction: row-reverse;
+}
+
+.user-message .bubble {
+  color: var(--text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 400;
+  text-align: right;
+}
+
+/* Панель действий (копировать / озвучить / перегенерировать / закладка) —
+   компактный ряд иконок, проявляется при наведении на сообщение. Время
+   всегда видно рядом, отдельно от этой панели. */
+.message-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.message:hover .message-actions,
+.message-actions:focus-within {
+  opacity: 1;
+}
+
+.message-actions button {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.message-actions button:hover {
+  color: var(--text-primary);
+  background: var(--bg-glass-strong);
+}
+
+.message-actions svg {
+  width: 13px;
+  height: 13px;
+  display: block;
+}
+
+.message-actions .regenerate-btn:active {
+  transform: rotate(-45deg);
+}
+
+.message-actions .pin-btn.pinned {
+  color: var(--brand-a);
+}
+
+mark {
+  background: var(--brand-b);
+  color: #06231F;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.sources {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  padding: 0 4px;
+  line-height: 1.5;
+}
+
+.sources a {
+  color: var(--brand-b);
+  text-decoration: none;
+}
+
+.sources a:hover {
+  text-decoration: underline;
+}
+
+/* ===== Оформление markdown внутри ответов бота ===== */
+.bubble p { margin: 0 0 8px 0; }
+.bubble p:last-child { margin-bottom: 0; }
+.bubble strong { font-weight: 700; }
+.bubble em { font-style: italic; }
+.bubble ul, .bubble ol { margin: 6px 0 6px 18px; }
+.bubble li { margin-bottom: 3px; }
+.bubble a { color: var(--brand-b); }
+.bubble code {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 12.5px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+.bubble pre {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px 12px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 8px 0;
+  position: relative;
+}
+.bubble pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Блок кода с подсветкой синтаксиса (highlight.js) + кнопка "Копировать" */
+.code-block-wrapper {
+  padding-top: 34px !important;
+}
+.code-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+  padding: 4px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.code-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text-primary);
+}
+.bubble h1, .bubble h2, .bubble h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  margin: 8px 0 6px 0;
+  font-size: 15px;
+}
+.bubble blockquote {
+  border-left: 2px solid var(--brand-a);
+  padding-left: 10px;
+  margin: 6px 0;
+  color: var(--text-muted);
+}
+
+/* Картинка внутри сообщения */
+.message-image {
+  max-width: 220px;
+  border-radius: 12px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* Сгенерированная ботом картинка (Pollinations) — крупнее, чем маленькое
+   превью прикреплённого фото, так как это основной результат ответа */
+.generated-image {
+  max-width: 360px;
+  width: 100%;
+  border-radius: 14px;
+  margin-top: 10px;
+  display: block;
+  border: 1px solid var(--border-glass);
+}
+
+/* ===== Превью прикреплённого изображения ===== */
+.image-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 22px;
+  border-top: 1px solid var(--border-glass);
+}
+
+.image-preview img {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.image-preview button {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-glass-strong);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* Микрофон: состояние "слушаю" */
+#micBtn.listening {
+  color: var(--brand-c);
+  animation: micPulse 1s infinite ease-in-out;
+}
+
+@keyframes micPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+/* ===== Поле ввода ===== */
+.chat-input-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 22px;
+  border-top: 1px solid var(--border-glass);
+  position: relative;
+}
+
+.input-pill {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-glass-strong);
+  border-radius: 24px;
+  padding: 4px 6px 4px 8px;
+}
+
+#userInput {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  outline: none;
+}
+
+#userInput::placeholder {
+  color: var(--text-muted);
+}
+
+#sendButton {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--brand-a);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+#sendButton:hover {
+  filter: brightness(1.08);
+}
+
+#sendButton:active {
+  transform: scale(0.94);
+}
+
+/* Эмодзи-панель */
+.emoji-popover {
+  position: absolute;
+  bottom: 68px;
+  left: 22px;
+  background: var(--bg-bubble-bot);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  box-shadow: 0 10px 30px var(--shadow-app);
+  z-index: 5;
+}
+
+.emoji-popover button {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.emoji-popover button:hover {
+  background: var(--bg-glass-strong);
+}
+
+/* ===== Модальное окно настроек ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 14, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.modal {
+  width: 320px;
+  background: var(--bg-void);
+  border: 1px solid var(--border-glass);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 30px 70px var(--shadow-app);
+}
+
+.modal h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 19px;
+  color: var(--text-primary);
+  margin-bottom: 18px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.field input[type="text"],
+.field input[type="password"] {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass-strong);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+}
+
+.field select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass-strong);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+}
+
+.checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-field input {
+  width: 16px;
+  height: 16px;
+}
+
+.primary-btn,
+.danger-btn {
+  width: 100%;
+  padding: 11px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.primary-btn {
+  background: var(--brand-a);
+  color: #fff;
+}
+
+.danger-btn {
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  color: #FF8A94;
+  margin-bottom: 10px;
+}
+
+/* ===== Аккаунт: вкладки и форма входа/регистрации ===== */
+.auth-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  background: var(--bg-glass-strong);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+
+.auth-tab.active {
+  background: var(--brand-a);
+  color: #fff;
+}
+
+.auth-error {
+  background: rgba(255, 92, 92, 0.12);
+  border: 1px solid rgba(255, 92, 92, 0.35);
+  color: #FF8A94;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.auth-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: -6px 0 14px;
+}
+
+/* ===== Закладки ===== */
+.bookmarks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+}
+
+.bookmark-item {
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  position: relative;
+  cursor: default;
+}
+
+.bookmark-item .bookmark-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.bookmark-item .bookmark-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.bookmark-item .bookmark-remove:hover {
+  color: var(--brand-c);
+}
+
+/* Подсказка, стоящая отдельно от поля ввода (не под ним, а под формой/кнопкой) —
+   не нужен отрицательный отступ, иначе текст немного перекрывается кнопкой выше */
+.auth-hint-standalone {
+  margin-top: 14px;
+}
+
+.auth-current-user {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+/* ===== Тост ===== */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-void);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.toast.visible {
+  opacity: 1;
+}
+
+/* ===== Адаптация под мобильные устройства ===== */
+@media (max-width: 640px) {
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+    align-items: stretch;
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-height: var(--app-height, 100dvh);
+  }
+
+  .app {
+    height: 100vh;
+    height: 100dvh;
+    height: var(--app-height, 100dvh);
+    max-width: 100%;
+    border-radius: 0;
+    flex-direction: column;
+  }
+
+  /* Боковая панель превращается в тонкую горизонтальную полосу сверху,
+     а не отъедает ширину экрана слева */
+  .rail {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 14px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+    gap: 6px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-glass);
+  }
+
+  .rail .logo-badge--sm {
+    margin-bottom: 0;
+    margin-right: 4px;
+  }
+
+  .rail-bottom {
+    margin-top: 0;
+    margin-left: auto;
+  }
+
+  /* Более крупные зоны нажатия для пальца */
+  .rail-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .header-actions button,
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  /* На телефоне уже есть системная эмодзи-клавиатура — своя кнопка
+     только отнимает и без того тесное место в поле ввода */
+  #emojiBtn {
+    display: none;
+  }
+
+  /* Оставшимся иконкам внутри поля ввода (скрепка, микрофон) урезаем
+     размер сильнее, чтобы у самого текстового поля осталось место */
+  .input-pill .icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .input-pill {
+    gap: 2px;
+    padding: 4px 4px 4px 6px;
+  }
+
+  #sendButton {
+    width: 44px;
+    height: 44px;
+  }
+
+  .chat-header {
+    padding: 12px 14px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+
+  .identity-text h1 {
+    font-size: 15px;
+  }
+
+  .chat-messages {
+    padding: 14px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+
+  .message {
+    max-width: 88%;
+  }
+
+  .message-image {
+    max-width: 160px;
+  }
+
+  /* 16px не даёт iOS автоматически зумить страницу при фокусе на поле */
+  #userInput,
+  #botNameInput,
+  #searchInput {
+    font-size: 16px;
+  }
+
+  .chat-input-area {
+    padding: 10px 12px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    gap: 8px;
+  }
+
+  .emoji-popover {
+    left: 12px;
+    right: 12px;
+    bottom: 66px;
+  }
+
+  .image-preview {
+    padding: 8px 14px;
+  }
+
+  .hero {
+    padding: 16px 20px;
+  }
+
+  .hero h2 {
+    font-size: 20px;
+  }
+
+  .hero p {
+    font-size: 13px;
+  }
+
+  .modal-overlay {
+    padding: 20px;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 360px;
+    max-height: 85vh;
+    max-height: 85dvh;
+    overflow-y: auto;
+  }
+}
+
+/* ===== Совсем маленькие экраны (iPhone SE и подобные) ===== */
+@media (max-width: 360px) {
+  .header-identity {
+    gap: 8px;
+  }
+
+  .status {
+    display: none;
+  }
+
+  .logo-badge--lg {
+    width: 68px;
+    height: 68px;
+  }
+
+  .hero h2 {
+    font-size: 18px;
+  }
+}
+
+/* ===== Альбомная ориентация на телефоне (мало высоты) ===== */
+@media (max-width: 900px) and (max-height: 480px) and (orientation: landscape) {
+  .hero {
+    flex-direction: row;
+    gap: 20px;
+    padding: 12px 24px;
+    text-align: left;
+  }
+
+  .logo-badge--lg {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 0;
+  }
+
+  .hero p {
+    display: none;
+  }
+
+  .chips {
+    display: none;
+  }
+}
