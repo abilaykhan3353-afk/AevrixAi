@@ -6,7 +6,7 @@
 <title>Aevrix Ai — умный чат-бот</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 
 <!-- Библиотеки для красивого форматирования ответов бота (markdown -> HTML) -->
@@ -23,7 +23,7 @@
 
     <nav class="rail">
       <div class="logo-badge logo-badge--sm">
-        <svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+        <img src="logo-icon.png" alt="Aevrix Ai">
       </div>
       <button class="rail-btn" id="settingsBtn" title="Настройки" aria-label="Настройки">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="15" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="9" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="16" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
@@ -35,10 +35,15 @@
 
     <div class="chat-panel">
 
+      <div class="shared-banner" id="sharedBanner" hidden>
+        Публичная ссылка · только чтение
+        <button type="button" id="exitSharedBtn">Открыть свой чат</button>
+      </div>
+
       <header class="chat-header">
         <div class="header-identity">
           <div class="logo-badge logo-badge--sm">
-            <svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+            <img src="logo-icon.png" alt="Aevrix Ai">
           </div>
           <div class="identity-text">
             <h1 id="botName">Aevrix Ai</h1>
@@ -46,6 +51,12 @@
           </div>
         </div>
         <div class="header-actions">
+          <button id="bookmarksBtn" title="Закладки" aria-label="Закладки">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1z"/></svg>
+          </button>
+          <button id="shareBtn" title="Поделиться разговором" aria-label="Поделиться разговором">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><line x1="8.2" y1="10.7" x2="15.8" y2="6.3"/><line x1="8.2" y1="13.3" x2="15.8" y2="17.7"/></svg>
+          </button>
           <button id="accountBtn" title="Аккаунт" aria-label="Аккаунт">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
           </button>
@@ -63,10 +74,11 @@
         <span class="search-count" id="searchCount"></span>
       </div>
 
+      <div class="wave-wrap" id="waveWrap">
+        <canvas id="waveCanvas"></canvas>
+      </div>
+
       <div class="hero" id="heroSection">
-        <div class="logo-badge logo-badge--lg">
-          <svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
-        </div>
         <h2>Привет, я <span id="heroName">Aevrix Ai</span> 👋</h2>
         <p>Спроси меня о чём угодно, покажи фото или просто скажи что-нибудь голосом — я помню наш разговор и, если нужно, поищу свежую информацию в интернете.</p>
 
@@ -120,28 +132,32 @@
         <input type="text" id="botNameInput" maxlength="20">
       </label>
 
-      <label class="field checkbox-field">
-        <input type="checkbox" id="showTimestamps" checked>
-        <span>Показывать время сообщений</span>
-      </label>
-
-      <label class="field checkbox-field">
-        <input type="checkbox" id="showVoiceOutput">
-        <span>Озвучивать ответы бота</span>
-      </label>
-
-      <label class="field">
-        <span>Стиль общения</span>
-        <select id="toneSelect">
-          <option value="neutral">Обычный, дружелюбный</option>
-          <option value="humor">С юмором и шутками</option>
-          <option value="rude">Дерзко, можно с матом</option>
-          <option value="formal">Уважительно, официально</option>
-        </select>
-      </label>
+      <p class="auth-hint auth-hint-standalone">Стиль общения не настраивается здесь — просто скажи об этом боту прямо в переписке ("общайся проще", "давай на "вы"", "пошути" и т.п.), и он подстроится.</p>
 
       <button id="resetChatBtn" class="danger-btn">Очистить историю чата</button>
       <button id="closeSettingsBtn" class="primary-btn">Готово</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="bookmarksOverlay" hidden>
+    <div class="modal">
+      <h2>Закладки</h2>
+      <div class="bookmarks-list" id="bookmarksList"></div>
+      <p class="auth-hint auth-hint-standalone" id="bookmarksEmptyHint">Пока пусто — отметь важный ответ значком закладки под сообщением.</p>
+      <button id="closeBookmarksBtn" class="primary-btn">Готово</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="shareOverlay" hidden>
+    <div class="modal">
+      <h2>Поделиться разговором</h2>
+      <p class="auth-hint auth-hint-standalone">Ссылка открывает разговор в режиме "только чтение" — без входа в аккаунт. Весь текущий разговор сохраняется прямо в самой ссылке.</p>
+      <label class="field">
+        <span>Ссылка</span>
+        <input type="text" id="shareLinkInput" readonly>
+      </label>
+      <button id="copyShareLinkBtn" class="primary-btn">Скопировать ссылку</button>
+      <button id="closeShareBtn" class="danger-btn">Закрыть</button>
     </div>
   </div>
 
