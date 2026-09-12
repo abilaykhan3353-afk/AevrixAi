@@ -49,6 +49,13 @@ const SEARCH_TRIGGERS = [
   'счёт матча', 'кто выиграл', 'кто сейчас', 'кто является', 'текущий', 'на данный момент',
   'обновлени', 'вышла ли', 'вышел ли', 'релиз', 'выборы', 'котировк', 'что происходит',
   'найди', 'поищи', 'загугли', 'посмотри в интернете',
+  // явные просьбы перепроверить/подтвердить факт — тоже должны запускать поиск,
+  // а не полагаться на память модели
+  'правда ли', 'это точно', 'точно ли', 'проверь', 'перепроверь', 'не ошибаюсь ли',
+  'не путаю ли', 'это факт', 'это миф', 'подтверди', 'уверен ли ты', 'ты уверен',
+  'источник', 'откуда информация',
+  // акции/крипта/версии ПО — тоже часто требуют свежих данных
+  'акции', 'биткоин', 'криптовалют', 'последняя версия', 'новая версия',
   // частые сокращения и разговорные варианты — тоже должны запускать поиск
   'щас', 'седня', 'счас'
 ];
@@ -272,7 +279,7 @@ app.delete('/api/history', auth.authRequired, async (req, res) => {
    часть резервной логики
    ===================================================================== */
 
-async function callGroq(model, messages, timeoutMs) {
+async function callGroq(model, messages, timeoutMs, temperature = 0.5) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -283,7 +290,7 @@ async function callGroq(model, messages, timeoutMs) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.GROQ_API_KEY}`
       },
-      body: JSON.stringify({ model, messages, max_completion_tokens: 1024, temperature: 0.5 }),
+      body: JSON.stringify({ model, messages, max_completion_tokens: 1024, temperature }),
       signal: controller.signal
     });
 
@@ -675,27 +682,50 @@ app.post('/api/chat/stream', async (req, res) => {
       return persistAndFinish(reply, [], false);
     }
 
-    const messages = [systemMessage, ...historyMessages, { role: 'user', content: userMessage }];
-    const minimalMessages = [systemMessage, { role: 'user', content: userMessage }];
+    const requiresSearch = needsSearch(userMessage);
+
+    // Для поисковых ответов добавляем отдельную инструкцию про перепроверку
+    // фактов — модель реально ищет в интернете (через встроенный инструмент
+    // поиска), и важно, чтобы она не хватала первый попавшийся результат,
+    // а сверяла информацию, помечала дату/актуальность данных и честно
+    // говорила, если источники расходятся или что-то не удалось подтвердить.
+    const searchSystemMessage = {
+      role: 'system',
+      content:
+        systemMessage.content +
+        ' Для этого ответа у тебя есть доступ к поиску в интернете — обязательно ' +
+        'воспользуйся им, не отвечай по памяти. Проверяй информацию по нескольким ' +
+        'найденным источникам, а не по одному первому попавшемуся. Если источники ' +
+        'расходятся в фактах — честно скажи об этом и укажи разные варианты, а не ' +
+        'выбирай один наугад. Указывай, на какой момент времени актуальны данные ' +
+        '(если это уместно, например курсы валют, новости, версии ПО). Если ' +
+        'уверенности в информации нет — так и скажи, не выдумывай факты.'
+    };
+
+    const messages = [
+      requiresSearch ? searchSystemMessage : systemMessage,
+      ...historyMessages,
+      { role: 'user', content: userMessage }
+    ];
+    const minimalMessages = [requiresSearch ? searchSystemMessage : systemMessage, { role: 'user', content: userMessage }];
 
     function isTooLarge(result) {
       return result.reason === 'error' && (result.status === 413 || /too_large|too large/i.test(result.detail || ''));
     }
 
-    const requiresSearch = needsSearch(userMessage);
     let result;
 
     if (requiresSearch) {
       // Поисковые модели Groq пока используем без стриминга — источники
       // (executed_tools) приходят только в финальном не-потоковом ответе.
-      result = await callGroq(SEARCH_MODEL, messages, SEARCH_TIMEOUT_MS);
+      result = await callGroq(SEARCH_MODEL, messages, SEARCH_TIMEOUT_MS, 0.3);
       if (!result.ok && result.reason === 'timeout') {
         console.log('↪️  Переключаюсь на облегчённую поисковую модель из-за тайм-аута...');
-        result = await callGroq(SEARCH_FALLBACK_MODEL, messages, SEARCH_FALLBACK_TIMEOUT_MS);
+        result = await callGroq(SEARCH_FALLBACK_MODEL, messages, SEARCH_FALLBACK_TIMEOUT_MS, 0.3);
       }
       if (!result.ok && isTooLarge(result)) {
         console.log('↪️  Запрос слишком большой — пробую без истории разговора...');
-        result = await callGroq(SEARCH_FALLBACK_MODEL, minimalMessages, SEARCH_FALLBACK_TIMEOUT_MS);
+        result = await callGroq(SEARCH_FALLBACK_MODEL, minimalMessages, SEARCH_FALLBACK_TIMEOUT_MS, 0.3);
       }
 
       if (result.ok) {
@@ -722,7 +752,8 @@ app.post('/api/chat/stream', async (req, res) => {
         });
       } else if (!result.ok && !streamed) {
         console.log('↪️  Обычная модель не ответила, пробую поисковую как запасной вариант...');
-        result = await callGroq(SEARCH_MODEL, messages, SEARCH_TIMEOUT_MS);
+        const searchMessages = [searchSystemMessage, ...historyMessages, { role: 'user', content: userMessage }];
+        result = await callGroq(SEARCH_MODEL, searchMessages, SEARCH_TIMEOUT_MS, 0.3);
         if (result.ok) {
           const { reply, sources } = extractReplyAndSources(result.data);
           send({ delta: reply });
