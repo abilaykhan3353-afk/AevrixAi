@@ -117,6 +117,40 @@ function needsSearch(message) {
 }
 
 /* =====================================================================
+   ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЙ — через Pollinations.ai (бесплатно, без API-ключа).
+   Если сообщение похоже на просьбу нарисовать/сгенерировать картинку —
+   достаём описание и строим прямую ссылку на изображение, без обращения
+   к Groq/Gemini вообще (быстрее и бесплатно).
+   ===================================================================== */
+
+const IMAGE_GEN_TRIGGERS = [
+  'нарисуй', 'нарисуйте', 'сгенерируй картинку', 'сгенерируй изображение',
+  'сгенерируй фото', 'сгенерируй рисунок', 'создай картинку', 'создай изображение',
+  'создай рисунок', 'сделай картинку', 'сделай изображение', 'сделай рисунок',
+  'сгенерируй мне картинку', 'нарисуй мне', 'draw a', 'draw me', 'generate an image',
+  'generate a picture', 'create an image'
+];
+
+function detectImageGenPrompt(message) {
+  const lower = message.toLowerCase();
+  for (const trigger of IMAGE_GEN_TRIGGERS) {
+    const idx = lower.indexOf(trigger);
+    if (idx === -1) continue;
+    let rest = message.slice(idx + trigger.length).trim();
+    // убираем частые связки сразу после триггера ("мне", "пожалуйста", двоеточие)
+    rest = rest.replace(/^(мне|для меня|пожалуйста)?[:\-,]?\s*/i, '').trim();
+    return rest || message;
+  }
+  return null;
+}
+
+function buildPollinationsUrl(prompt) {
+  const encoded = encodeURIComponent(prompt.slice(0, 600));
+  const seed = Math.floor(Math.random() * 1_000_000);
+  return `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&seed=${seed}&nologo=true`;
+}
+
+/* =====================================================================
    ЛОГИРОВАНИЕ ПЕРЕПИСКИ (для /admin)
    Каждое сообщение и ответ бота дописываются в файл conversations.log.jsonl
    (по одной JSON-записи на строку). Так ты можешь посмотреть, о чём
@@ -624,12 +658,12 @@ app.post('/api/chat/stream', async (req, res) => {
       'отдельной короткой фразой в конце.'
   };
 
-  async function persistAndFinish(reply, sources, usedSearch) {
+  async function persistAndFinish(reply, sources, usedSearch, imageUrl) {
     if (req.user) {
       await history.saveMessage(req.user.id, 'user', userMessage || '[изображение]', [], tone);
       await history.saveMessage(req.user.id, 'bot', reply, sources, tone);
     }
-    send({ done: true, sources: sources || [], usedSearch: Boolean(usedSearch) });
+    send({ done: true, sources: sources || [], usedSearch: Boolean(usedSearch), imageUrl: imageUrl || null });
     res.end();
   }
 
@@ -680,6 +714,25 @@ app.post('/api/chat/stream', async (req, res) => {
         reply
       });
       return persistAndFinish(reply, [], false);
+    }
+
+    // ===== Просьба нарисовать/сгенерировать картинку — сразу через Pollinations,
+    // без обращения к Groq/Gemini (быстрее, бесплатно, без API-ключа) =====
+    const imagePrompt = detectImageGenPrompt(userMessage);
+    if (imagePrompt) {
+      const generatedImageUrl = buildPollinationsUrl(imagePrompt);
+      const caption = `Вот что получилось по запросу «${imagePrompt}» 🎨`;
+      send({ delta: caption });
+      logConversation({
+        time: new Date().toISOString(),
+        ip: req.ip,
+        tone,
+        usedSearch: false,
+        usedImageGen: true,
+        message: userMessage,
+        reply: caption
+      });
+      return persistAndFinish(caption, [], false, generatedImageUrl);
     }
 
     const requiresSearch = needsSearch(userMessage);
