@@ -139,6 +139,8 @@ applyTheme(getInitialTheme());
 
 themeToggle.addEventListener('click', () => {
   const current = document.documentElement.getAttribute('data-theme');
+  themeIcon.classList.add('switching');
+  setTimeout(() => themeIcon.classList.remove('switching'), 400);
   applyTheme(current === 'dark' ? 'light' : 'dark');
 });
 
@@ -455,7 +457,11 @@ function enhanceCodeBlocks(bubble) {
     btn.addEventListener('click', () => {
       navigator.clipboard.writeText(codeEl.textContent || '').then(() => {
         btn.textContent = 'Скопировано!';
-        setTimeout(() => { btn.textContent = 'Копировать'; }, 1500);
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Копировать';
+          btn.classList.remove('copied');
+        }, 1500);
       });
     });
     pre.appendChild(btn);
@@ -545,7 +551,7 @@ function addMessage(text, sender, { sources = [], imageUrl = null, save = true }
   messageDiv.appendChild(body);
 
   chatMessages.appendChild(messageDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
 
   if (save) {
     saveMessageToStorage({ sender, text, sources, timestamp: timestamp.textContent });
@@ -563,6 +569,7 @@ const waveCanvas = document.getElementById('waveCanvas');
 const waveCtx = waveCanvas ? waveCanvas.getContext('2d') : null;
 const chatPanelEl = document.querySelector('.chat-panel');
 const statusTextEl = document.querySelector('.status');
+const headerLogoBadge = document.getElementById('headerLogoBadge');
 
 let waveMode = 'idle';
 let waveT = 0;
@@ -636,6 +643,7 @@ function drawWave() {
 
 function setWaveMode(mode) {
   waveMode = mode;
+  headerLogoBadge?.classList.toggle('is-active', mode === 'thinking' || mode === 'speaking');
   if (!statusTextEl) return;
   if (mode === 'thinking') statusTextEl.textContent = 'думает';
   else if (mode === 'speaking') statusTextEl.textContent = 'отвечает';
@@ -1233,6 +1241,12 @@ async function sendMessage() {
 }
 
 sendButton.addEventListener('click', sendMessage);
+sendButton.addEventListener('click', () => {
+  // Короткая рябь (ripple) при нажатии — чисто визуальный отклик на клик
+  sendButton.classList.remove('rippling');
+  void sendButton.offsetWidth; // форсируем reflow, чтобы анимацию можно было перезапустить подряд
+  sendButton.classList.add('rippling');
+});
 userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
 
 /* ===== Подсказки на экране приветствия ===== */
