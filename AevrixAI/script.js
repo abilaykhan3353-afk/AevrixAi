@@ -165,6 +165,24 @@ function showToast(message) {
   }, 2200);
 }
 
+// Открытие/закрытие модальных окон (настройки, закладки, шаринг, аккаунт) с
+// анимацией вместо мгновенного [hidden]. Двойной requestAnimationFrame нужен,
+// чтобы браузер успел отрисовать закрытое состояние ДО добавления класса
+// .open — иначе transition не запустится (стили применятся сразу).
+function openModal(overlay) {
+  overlay.hidden = false;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => overlay.classList.add('open'));
+  });
+}
+
+function closeModal(overlay) {
+  overlay.classList.remove('open');
+  const finish = () => { overlay.hidden = true; };
+  overlay.addEventListener('transitionend', finish, { once: true });
+  setTimeout(finish, 400); // подстраховка, если transitionend не сработает
+}
+
 // Убираем markdown-символы для озвучки — так голос звучит естественнее
 function stripMarkdown(text) {
   return text
@@ -741,11 +759,11 @@ function openAuthModal() {
     registerForm.hidden = true;
   }
 
-  authOverlay.hidden = false;
+  openModal(authOverlay);
 }
 
 function closeAuthModal() {
-  authOverlay.hidden = true;
+  closeModal(authOverlay);
 }
 
 accountBtn.addEventListener('click', openAuthModal);
@@ -754,6 +772,9 @@ closeAccountBtn.addEventListener('click', closeAuthModal);
 
 authOverlay.addEventListener('click', (e) => {
   if (e.target === authOverlay) closeAuthModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && authOverlay.classList.contains('open')) closeAuthModal();
 });
 
 tabLogin.addEventListener('click', () => {
@@ -972,75 +993,113 @@ async function requestBotReply(text, imageToSend, { isRegenerate = false } = {})
 
   let botMessageDiv = null;
   let bubble = null;
-  let accumulated = '';
+  let accumulated = ''; // весь текст, полученный от сервера на данный момент
+  let revealed = 0;     // сколько символов уже показано пользователю (эффект печати)
+  let revealTimer = null;
+  let streamEnded = false; // сервер прислал "done" — но текст мог ещё не досчитаться
+
+  function ensureBubble() {
+    if (!botMessageDiv) {
+      setWaveMode('speaking');
+      botMessageDiv = addMessage('', 'bot', { save: false });
+      bubble = botMessageDiv.querySelector('.bubble');
+    }
+  }
+
+  // Показывает текст посимвольно с постоянной скоростью, НЕЗАВИСИМО от того,
+  // как неровно Groq присылает куски (иногда по 1 символу, иногда пачкой сразу
+  // за 10-15 штук) — иначе печать выглядит рваной, а не плавной. Если текста
+  // накопилось много (сервер уже закончил, а мы всё ещё "печатаем") — скорость
+  // адаптивно увеличивается, чтобы не заставлять пользователя ждать.
+  function startTicker() {
+    if (revealTimer) return;
+    revealTimer = setInterval(() => {
+      if (revealed < accumulated.length) {
+        const remaining = accumulated.length - revealed;
+        const step = remaining > 50 ? Math.ceil(remaining / 10) : 1;
+        revealed = Math.min(accumulated.length, revealed + step);
+        bubble.innerHTML = escapeHtml(accumulated.slice(0, revealed)).replace(/\n/g, '<br>') +
+          '<span class="typing-cursor"></span>';
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      } else if (streamEnded) {
+        clearInterval(revealTimer);
+        revealTimer = null;
+        finalizeMessage();
+      }
+    }, 18);
+  }
+
+  function finalizeMessage() {
+    const sources = finalizeMessage.sources || [];
+    const imageUrl = finalizeMessage.imageUrl || null;
+
+    botMessageDiv.dataset.rawText = accumulated;
+    renderBubbleContent(bubble, accumulated, 'bot'); // убирает курсор, включает markdown/подсветку
+
+    if (sources.length > 0) {
+      const sourcesBlock = document.createElement('div');
+      sourcesBlock.classList.add('sources');
+      sourcesBlock.innerHTML =
+        '🔎 Источники: ' +
+        sources
+          .slice(0, 3)
+          .map((s) => `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title)}</a>`)
+          .join(', ');
+      bubble.insertAdjacentElement('afterend', sourcesBlock);
+    }
+
+    if (imageUrl) {
+      const genImg = document.createElement('img');
+      genImg.src = imageUrl;
+      genImg.alt = text;
+      genImg.classList.add('message-image', 'generated-image');
+      genImg.loading = 'lazy';
+      bubble.insertAdjacentElement('afterend', genImg);
+    }
+
+    const timestampEl = botMessageDiv.querySelector('.timestamp');
+    saveMessageToStorage({ sender: 'bot', text: accumulated, sources, timestamp: timestampEl?.textContent });
+
+    attachRegenerateButton(botMessageDiv, text, imageToSend);
+
+    if (!isRegenerate) pushToHistory('user', text || 'Изображение');
+    pushToHistory('model', accumulated);
+
+    sendButton.disabled = false;
+    userInput.focus();
+  }
 
   await streamAskServer(
     text,
     imageToSend,
     (delta) => {
-      if (!botMessageDiv) {
-        setWaveMode('speaking');
-        botMessageDiv = addMessage('', 'bot', { save: false });
-        bubble = botMessageDiv.querySelector('.bubble');
-      }
+      ensureBubble();
       accumulated += delta;
-      // Во время стрима показываем обычный текст (без разбора markdown) —
-      // парсить markdown на каждый кусочек дорого и вызывает "мигание" разметки.
-      bubble.textContent = accumulated;
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+      startTicker();
     },
     (payload) => {
       setWaveMode('idle');
-      const sources = payload.sources || [];
+      finalizeMessage.sources = payload.sources || [];
+      finalizeMessage.imageUrl = payload.imageUrl || null;
+      streamEnded = true;
 
       if (!botMessageDiv) {
-        // Ничего не стримилось (ответ пришёл сразу одним куском, например
-        // сообщение об ошибке) — такое приходит через delta, но на всякий
-        // случай подстрахуемся.
-        botMessageDiv = addMessage(accumulated || 'Не получилось получить ответ.', 'bot', { sources });
-      } else {
-        // Финальная отрисовка с полноценным markdown + добавление источников
-        botMessageDiv.dataset.rawText = accumulated;
-        renderBubbleContent(bubble, accumulated, 'bot');
-
-        if (sources.length > 0) {
-          const sourcesBlock = document.createElement('div');
-          sourcesBlock.classList.add('sources');
-          sourcesBlock.innerHTML =
-            '🔎 Источники: ' +
-            sources
-              .slice(0, 3)
-              .map((s) => `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title)}</a>`)
-              .join(', ');
-          bubble.insertAdjacentElement('afterend', sourcesBlock);
-        }
-
-        // Сгенерированное изображение (Pollinations) — вставляем картинкой
-        // прямо в сообщение, до строки времени/действий
-        if (payload.imageUrl) {
-          const genImg = document.createElement('img');
-          genImg.src = payload.imageUrl;
-          genImg.alt = text;
-          genImg.classList.add('message-image', 'generated-image');
-          genImg.loading = 'lazy';
-          bubble.insertAdjacentElement('afterend', genImg);
-        }
-
-        const timestampEl = botMessageDiv.querySelector('.timestamp');
-        saveMessageToStorage({ sender: 'bot', text: accumulated, sources, timestamp: timestampEl?.textContent });
+        // Ничего не стримилось (пустой ответ) — подстрахуемся
+        ensureBubble();
+        accumulated = accumulated || 'Не получилось получить ответ.';
+        revealed = accumulated.length;
       }
 
-      attachRegenerateButton(botMessageDiv, text, imageToSend);
-
-      if (!isRegenerate) pushToHistory('user', text || 'Изображение');
-      pushToHistory('model', accumulated);
-
-      sendButton.disabled = false;
-      userInput.focus();
+      // Если "печать" уже нагнала весь текст — завершаем сразу, иначе тикер
+      // сам вызовет finalizeMessage(), когда закончит показывать текст.
+      if (revealed >= accumulated.length && !revealTimer) {
+        finalizeMessage();
+      }
     },
     (err) => {
       console.error(err);
       setWaveMode('idle');
+      if (revealTimer) { clearInterval(revealTimer); revealTimer = null; }
       if (botMessageDiv) botMessageDiv.remove(); // убираем недописанный пузырь
 
       if (err.isTimeout) {
@@ -1365,7 +1424,7 @@ document.addEventListener('click', (e) => {
 
 settingsBtn.addEventListener('click', () => {
   botNameInput.value = settings.botName;
-  settingsOverlay.hidden = false;
+  openModal(settingsOverlay);
 });
 
 closeSettingsBtn.addEventListener('click', () => {
@@ -1374,34 +1433,40 @@ closeSettingsBtn.addEventListener('click', () => {
   localStorage.setItem('chatbot-name', settings.botName);
 
   applySettingsToUI();
-  settingsOverlay.hidden = true;
+  closeModal(settingsOverlay);
 });
 
 resetChatBtn.addEventListener('click', () => {
   if (confirm('Очистить всю историю переписки?')) {
     fullyResetChat();
-    settingsOverlay.hidden = true;
+    closeModal(settingsOverlay);
     showToast('История чата очищена');
   }
 });
 
 settingsOverlay.addEventListener('click', (e) => {
-  if (e.target === settingsOverlay) settingsOverlay.hidden = true;
+  if (e.target === settingsOverlay) closeModal(settingsOverlay);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && settingsOverlay.classList.contains('open')) closeModal(settingsOverlay);
 });
 
 /* ===== Закладки ===== */
 
 bookmarksBtn.addEventListener('click', () => {
   renderBookmarksList();
-  bookmarksOverlay.hidden = false;
+  openModal(bookmarksOverlay);
 });
 
 closeBookmarksBtn.addEventListener('click', () => {
-  bookmarksOverlay.hidden = true;
+  closeModal(bookmarksOverlay);
 });
 
 bookmarksOverlay.addEventListener('click', (e) => {
-  if (e.target === bookmarksOverlay) bookmarksOverlay.hidden = true;
+  if (e.target === bookmarksOverlay) closeModal(bookmarksOverlay);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && bookmarksOverlay.classList.contains('open')) closeModal(bookmarksOverlay);
 });
 
 /* =====================================================================
@@ -1433,15 +1498,18 @@ shareBtn.addEventListener('click', () => {
   const encoded = encodeSharedConversation(conversationHistory);
   const url = `${location.origin}${location.pathname}?shared=${encoded}`;
   shareLinkInput.value = url;
-  shareOverlay.hidden = false;
+  openModal(shareOverlay);
 });
 
 closeShareBtn.addEventListener('click', () => {
-  shareOverlay.hidden = true;
+  closeModal(shareOverlay);
 });
 
 shareOverlay.addEventListener('click', (e) => {
-  if (e.target === shareOverlay) shareOverlay.hidden = true;
+  if (e.target === shareOverlay) closeModal(shareOverlay);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && shareOverlay.classList.contains('open')) closeModal(shareOverlay);
 });
 
 copyShareLinkBtn.addEventListener('click', () => {
