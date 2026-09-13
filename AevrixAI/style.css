@@ -472,6 +472,21 @@ body {
   to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
+/* Мигающий курсор в конце текста во время стриминга ответа */
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--brand-a);
+  animation: cursorBlink 0.9s step-start infinite;
+}
+
+@keyframes cursorBlink {
+  50% { opacity: 0; }
+}
+
 .message.hidden-by-search {
   display: none;
 }
@@ -842,11 +857,20 @@ mark {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 8, 14, 0.55);
+  background: rgba(5, 8, 14, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
+  transition: background 0.32s ease, backdrop-filter 0.32s ease, -webkit-backdrop-filter 0.32s ease;
+}
+
+.modal-overlay.open {
+  background: rgba(5, 8, 14, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .modal {
@@ -856,6 +880,14 @@ mark {
   border-radius: 20px;
   padding: 24px;
   box-shadow: 0 30px 70px var(--shadow-app);
+  opacity: 0;
+  transform: scale(0.9) translateY(28px);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.28s ease;
+}
+
+.modal-overlay.open .modal {
+  opacity: 1;
+  transform: scale(1) translateY(0);
 }
 
 .modal h2 {
@@ -1038,7 +1070,7 @@ mark {
   position: fixed;
   bottom: 24px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, 10px);
   background: var(--bg-void);
   border: 1px solid var(--border-glass);
   color: var(--text-primary);
@@ -1047,11 +1079,13 @@ mark {
   font-size: 13px;
   z-index: 20;
   opacity: 0;
-  transition: opacity 0.25s ease;
+  box-shadow: 0 12px 30px var(--shadow-app);
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .toast.visible {
   opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 /* ===== Адаптация под мобильные устройства ===== */
