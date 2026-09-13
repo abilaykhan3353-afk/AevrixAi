@@ -98,6 +98,36 @@ body {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
   box-shadow: 0 40px 90px var(--shadow-app);
+  animation: appBootIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* ===== "Включение сигнала" при первой загрузке ===== */
+@keyframes appBootIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(10px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+.rail-btn,
+.logo-badge--sm {
+  animation: fadeSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.rail .logo-badge--sm { animation-delay: 0.05s; }
+.rail-btn:nth-of-type(1) { animation-delay: 0.10s; }
+.rail-btn:nth-of-type(2) { animation-delay: 0.16s; }
+.rail-btn:nth-of-type(3) { animation-delay: 0.22s; }
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 /* ===== Боковая панель ===== */
@@ -109,6 +139,7 @@ body {
   padding: 20px 0;
   gap: 10px;
   border-right: 1px solid var(--border-glass);
+  transition: border-color 0.4s ease;
 }
 
 .logo-badge {
@@ -142,11 +173,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .rail-btn:hover {
   background: var(--bg-glass-strong);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.rail-btn:active {
+  transform: scale(0.9);
 }
 
 .rail-bottom {
@@ -191,6 +228,7 @@ body {
   justify-content: space-between;
   padding: 16px 22px;
   border-bottom: 1px solid var(--border-glass);
+  transition: border-color 0.4s ease;
 }
 
 .header-identity {
@@ -320,6 +358,13 @@ body {
   max-width: 460px;
   height: 100%;
   display: block;
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--brand-a) 35%, transparent));
+  animation: waveGlowPulse 3.2s ease-in-out infinite;
+}
+
+@keyframes waveGlowPulse {
+  0%, 100% { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--brand-a) 25%, transparent)); }
+  50% { filter: drop-shadow(0 0 24px color-mix(in srgb, var(--brand-a) 45%, transparent)); }
 }
 
 .hero {
@@ -338,6 +383,8 @@ body {
   font-weight: 600;
   font-size: 24px;
   color: var(--text-primary);
+  animation: fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.15s;
 }
 
 .hero p {
@@ -345,6 +392,13 @@ body {
   color: var(--text-muted);
   max-width: 340px;
   line-height: 1.5;
+  animation: fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.24s;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Подсказки-примеры на экране приветствия */
@@ -366,12 +420,23 @@ body {
   padding: 9px 14px;
   border-radius: 10px;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, background 0.2s ease;
+  animation: fadeSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+.suggested-prompts .suggested-prompt-btn:nth-child(1) { animation-delay: 0.32s; }
+.suggested-prompts .suggested-prompt-btn:nth-child(2) { animation-delay: 0.38s; }
+.suggested-prompts .suggested-prompt-btn:nth-child(3) { animation-delay: 0.44s; }
+.suggested-prompts .suggested-prompt-btn:nth-child(4) { animation-delay: 0.50s; }
 
 .suggested-prompt-btn:hover {
   border-color: var(--brand-a);
-  transform: translateY(-1px);
+  background: var(--bg-glass-strong);
+  transform: translateY(-2px) scale(1.03);
+}
+
+.suggested-prompt-btn:active {
+  transform: scale(0.96);
 }
 
 /* ===== Сообщения ===== */
@@ -398,13 +463,13 @@ body {
 .message {
   display: flex;
   max-width: 82%;
-  animation: riseIn 0.25s ease;
+  animation: riseIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
 }
 
 @keyframes riseIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(10px) scale(0.98); filter: blur(2px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
 .message.hidden-by-search {
@@ -713,15 +778,35 @@ mark {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: filter 0.15s ease, transform 0.1s ease;
+  transition: filter 0.15s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease, box-shadow 0.25s ease;
 }
 
 #sendButton:hover {
   filter: brightness(1.08);
+  transform: scale(1.06);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--brand-a) 45%, transparent);
 }
 
 #sendButton:active {
-  transform: scale(0.94);
+  transform: scale(0.9);
+}
+
+#sendButton svg {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#sendButton.stop-mode {
+  background: var(--brand-c);
+  animation: stopPulse 1.4s ease-in-out infinite;
+}
+
+#sendButton.stop-mode:hover {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--brand-c) 50%, transparent);
+}
+
+@keyframes stopPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand-c) 45%, transparent); }
+  50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--brand-c) 0%, transparent); }
 }
 
 /* Эмодзи-панель */
