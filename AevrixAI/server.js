@@ -636,6 +636,218 @@ async function callTavily(query) {
 }
 
 /* =====================================================================
+   BRAVE SEARCH — ВТОРОЙ РЕЗЕРВНЫЙ ПОИСК
+   Используется, если и Groq, и Tavily недоступны. Нужен BRAVE_API_KEY
+   (bezplatный тариф на brave.com/search/api).
+   ===================================================================== */
+
+const BRAVE_TIMEOUT_MS = 15000;
+
+async function callBraveSearch(query) {
+  if (!process.env.BRAVE_API_KEY) return null;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), BRAVE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(
+      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5`,
+      {
+        headers: { Accept: 'application/json', 'X-Subscription-Token': process.env.BRAVE_API_KEY },
+        signal: controller.signal
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Ошибка Brave Search API:', response.status, await response.text().catch(() => ''));
+      return null;
+    }
+
+    const data = await response.json();
+    const results = data.web?.results || [];
+    const sources = results.filter((r) => r.url).map((r) => ({ title: r.title || r.url, url: r.url }));
+
+    const reply = results
+      .slice(0, 3)
+      .map((r) => `• ${r.title}: ${(r.description || '').replace(/<[^>]+>/g, '').slice(0, 200)}`)
+      .join('\n\n');
+    if (!reply) return null;
+
+    return {
+      reply: `⚠️ Groq сейчас недоступен, вот что удалось найти через резервный поиск:\n\n${reply}`,
+      sources
+    };
+  } catch (err) {
+    console.error('Ошибка обращения к Brave Search:', err);
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/* =====================================================================
+   ТОЧНЫЕ ДАННЫЕ ВМЕСТО ОБЩЕГО ПОИСКА — погода / курс валют / новости
+   Для этих трёх тем есть специализированные бесплатные API — они точнее
+   и быстрее, чем просить compound-модель искать это в интернете.
+   ===================================================================== */
+
+async function getWeatherFacts(city) {
+  if (!city) return null;
+  try {
+    const geoRes = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ru`
+    );
+    const geo = await geoRes.json();
+    const place = geo.results?.[0];
+    if (!place) return null;
+
+    const weatherRes = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}` +
+        `&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code`
+    );
+    const weather = await weatherRes.json();
+    const c = weather.current;
+    if (!c) return null;
+
+    return (
+      `Погода в городе ${place.name}${place.country ? ', ' + place.country : ''} на данный момент: ` +
+      `температура ${c.temperature_2m}°C (ощущается как ${c.apparent_temperature}°C), ` +
+      `влажность ${c.relative_humidity_2m}%, ветер ${c.wind_speed_10m} км/ч, код погодных условий ` +
+      `${c.weather_code} (классификация WMO). Данные актуальны на ${c.time} (UTC).`
+    );
+  } catch (err) {
+    console.error('Ошибка получения погоды:', err);
+    return null;
+  }
+}
+
+async function getCurrencyFacts(from, to) {
+  if (!from) return null;
+  const toCode = (to || 'USD').toUpperCase();
+  try {
+    const res = await fetch(`https://open.er-api.com/v6/latest/${from.toUpperCase()}`);
+    const data = await res.json();
+    if (data.result !== 'success') return null;
+    const rate = data.rates?.[toCode];
+    if (!rate) return null;
+    return (
+      `Курс на данный момент: 1 ${from.toUpperCase()} = ${rate} ${toCode}. ` +
+      `Данные обновлены: ${data.time_last_update_utc}.`
+    );
+  } catch (err) {
+    console.error('Ошибка получения курса валют:', err);
+    return null;
+  }
+}
+
+async function getNewsFacts(topic) {
+  if (!topic) return null;
+
+  if (process.env.NEWSDATA_API_KEY) {
+    try {
+      const res = await fetch(
+        `https://newsdata.io/api/1/news?apikey=${process.env.NEWSDATA_API_KEY}` +
+          `&q=${encodeURIComponent(topic)}&language=ru,en&size=5`
+      );
+      const data = await res.json();
+      if (data.status === 'success' && data.results?.length) {
+        return data.results
+          .slice(0, 5)
+          .map((a) => `• ${a.title} (${a.source_id}, ${a.pubDate})`)
+          .join('\n');
+      }
+    } catch (err) {
+      console.error('Ошибка NewsData.io:', err);
+    }
+  }
+
+  if (process.env.GNEWS_API_KEY) {
+    try {
+      const res = await fetch(
+        `https://gnews.io/api/v4/search?q=${encodeURIComponent(topic)}&lang=ru&max=5&apikey=${process.env.GNEWS_API_KEY}`
+      );
+      const data = await res.json();
+      if (data.articles?.length) {
+        return data.articles
+          .slice(0, 5)
+          .map((a) => `• ${a.title} (${a.source?.name}, ${a.publishedAt})`)
+          .join('\n');
+      }
+    } catch (err) {
+      console.error('Ошибка GNews:', err);
+    }
+  }
+
+  return null;
+}
+
+/* =====================================================================
+   КЛАССИФИКАЦИЯ НАМЕРЕНИЯ СООБЩЕНИЯ (вместо чистого regex-детекта)
+   Лёгкий отдельный запрос к быстрой модели: определяет, нужны ли внешние
+   данные и какие именно — погода/курс валют/новости/общий поиск — плюс
+   нормализованные параметры (город, валютная пара, тема). Ловит
+   перефразировки и сокращения, которые regex-триггеры (needsSearch)
+   пропускают. При ошибке/тайм-ауте — откат на needsSearch.
+   ===================================================================== */
+
+const INTENT_TIMEOUT_MS = 6000;
+
+async function classifyIntent(message) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), INTENT_TIMEOUT_MS);
+
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: CHAT_MODEL,
+        temperature: 0,
+        max_completion_tokens: 200,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Определи намерение сообщения пользователя и верни ТОЛЬКО JSON без ' +
+              'пояснений в формате: {"module":"weather|currency|news|search|none",' +
+              '"city":"город или null","from":"код валюты-исходник или null",' +
+              '"to":"код валюты-цель или null","query":"нормализованная тема запроса ' +
+              'для поиска/новостей или null"}. weather — если спрашивают про погоду ' +
+              'где-либо. currency — если спрашивают курс/конвертацию одной валюты в ' +
+              'другую (коды ISO типа USD/EUR/KZT/RUB, по умолчанию to="USD", если ' +
+              'вторая валюта не названа). news — если спрашивают именно новости/что ' +
+              'нового по теме. search — любой другой вопрос, где нужны точные ' +
+              'актуальные/свежие данные, факты, которые могут устареть, или явная ' +
+              'просьба поискать/проверить/перепроверить. none — обычное общение, ' +
+              'мнение, объяснение, не требующее свежих данных. Понимай опечатки, ' +
+              'сокращения и разговорные формулировки как обычный человек.'
+          },
+          { role: 'user', content: message }
+        ]
+      }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    const raw = data.choices?.[0]?.message?.content;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed.module) return null;
+    return parsed;
+  } catch (err) {
+    console.error('Ошибка классификации намерения:', err);
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/* =====================================================================
    ЕДИНАЯ ТОЧКА ЧАТА (стриминг по SSE)
 
    Протокол простой: сервер отправляет строки вида "data: {...}\n\n".
@@ -807,7 +1019,57 @@ app.post('/api/chat/stream', async (req, res) => {
       return persistAndFinish(caption, [], false, generatedImageUrl);
     }
 
-    const requiresSearch = needsSearch(userMessage);
+    let intent = await classifyIntent(userMessage);
+    if (!intent) {
+      // Классификатор недоступен/не ответил вовремя — откатываемся на
+      // старый regex-детект, чтобы поиск в любом случае не сломался.
+      intent = { module: needsSearch(userMessage) ? 'search' : 'none' };
+    }
+
+    // Погода/курс валют/новости — берём точные данные из специализированного
+    // API напрямую, без обращения к общей поисковой модели.
+    if (intent.module === 'weather' || intent.module === 'currency' || intent.module === 'news') {
+      let facts = null;
+      if (intent.module === 'weather') facts = await getWeatherFacts(intent.city);
+      else if (intent.module === 'currency') facts = await getCurrencyFacts(intent.from, intent.to);
+      else if (intent.module === 'news') facts = await getNewsFacts(intent.query || intent.city);
+
+      if (facts) {
+        const factsSystemMessage = {
+          role: 'system',
+          content:
+            systemMessage.content +
+            ' Вот точные актуальные данные, полученные напрямую из специализированного ' +
+            'источника — используй их для ответа, не сомневайся в них и не придумывай ' +
+            'ничего сверх них, просто изложи своими словами в подходящем тоне:\n\n' + facts
+        };
+        const factsMessages = [factsSystemMessage, ...historyMessages, { role: 'user', content: userMessage }];
+
+        let streamed = false;
+        const factsResult = await streamGroq(CHAT_MODEL, factsMessages, CHAT_TIMEOUT_MS, (delta) => {
+          streamed = true;
+          send({ delta });
+        });
+
+        if (factsResult.ok) {
+          logConversation({
+            time: new Date().toISOString(), ip: req.ip, tone, usedSearch: true, usedModule: intent.module, message: userMessage, reply: factsResult.fullText
+          });
+          return persistAndFinish(factsResult.fullText, [], true);
+        }
+        if (streamed) {
+          // Стрим успел начаться, но оборвался — дальше уже не откатиться,
+          // просто завершаем как есть.
+          return persistAndFinish(factsResult.fullText || '', [], true);
+        }
+        // Стрим не начался вовсе — падаем в обычный поисковый флоу ниже.
+      }
+      // Фактов не нашли (например, город/валюта не распознаны) — считаем
+      // это обычным поисковым запросом.
+      intent.module = 'search';
+    }
+
+    const requiresSearch = intent.module === 'search';
 
     // Для поисковых ответов добавляем отдельную инструкцию про перепроверку
     // фактов — модель реально ищет в интернете (через встроенный инструмент
@@ -909,6 +1171,17 @@ app.post('/api/chat/stream', async (req, res) => {
         time: new Date().toISOString(), ip: req.ip, tone, usedSearch: requiresSearch, usedFallback: true, message: userMessage, reply: tavilyResult.reply
       });
       return persistAndFinish(tavilyResult.reply, tavilyResult.sources, requiresSearch);
+    }
+
+    console.log('↪️  Tavily тоже недоступен, пробую Brave Search...');
+    const braveResult = await callBraveSearch(userMessage);
+
+    if (braveResult) {
+      send({ delta: braveResult.reply });
+      logConversation({
+        time: new Date().toISOString(), ip: req.ip, tone, usedSearch: requiresSearch, usedFallback: true, message: userMessage, reply: braveResult.reply
+      });
+      return persistAndFinish(braveResult.reply, braveResult.sources, requiresSearch);
     }
 
     const errorMessage =
