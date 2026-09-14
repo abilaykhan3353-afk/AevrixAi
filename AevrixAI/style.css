@@ -710,6 +710,27 @@ mark {
   45% { transform: scale(1.12); }
   100% { transform: scale(1); }
 }
+.bubble table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.bubble table tr { border-bottom: 1px solid var(--border-glass); }
+.bubble table th, .bubble table td {
+  padding: 7px 12px;
+  text-align: left;
+  overflow-wrap: normal;
+}
+.bubble table th {
+  font-weight: 700;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--brand-a);
+}
+
 .bubble h1, .bubble h2, .bubble h3 {
   font-family: 'Space Grotesk', sans-serif;
   margin: 8px 0 6px 0;
