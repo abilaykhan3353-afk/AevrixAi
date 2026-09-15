@@ -848,6 +848,79 @@ async function classifyIntent(message) {
 }
 
 /* =====================================================================
+   РЕПОРТЫ В TELEGRAM — "поддержка": ошибки бота, предложения, другое.
+   Нужны TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID в .env (бот создаётся через
+   @BotFather, id чата/группы — через @userinfobot или @RawDataBot).
+   ===================================================================== */
+
+const REPORT_CATEGORY_LABELS = { bug: '🐞 Ошибка бота', idea: '💡 Предложение', other: '📩 Другое' };
+
+async function sendTelegramMessage(text) {
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) return false;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: process.env.TELEGRAM_CHAT_ID,
+        text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      })
+    });
+    if (!res.ok) {
+      console.error('Ошибка Telegram API:', res.status, await res.text().catch(() => ''));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Ошибка отправки в Telegram:', err);
+    return false;
+  }
+}
+
+function escapeHtmlForTelegram(text) {
+  return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+app.post('/api/report', async (req, res) => {
+  const { category, comment, reportedMessage, context } = req.body || {};
+  const trimmedComment = (comment || '').trim();
+
+  if (!trimmedComment) {
+    return res.status(400).json({ error: 'Пустой комментарий' });
+  }
+
+  const label = REPORT_CATEGORY_LABELS[category] || REPORT_CATEGORY_LABELS.other;
+  const who = req.user ? `пользователь #${req.user.id}${req.user.email ? ' (' + req.user.email + ')' : ''}` : 'гость';
+
+  const contextText = Array.isArray(context) && context.length
+    ? context
+        .slice(-6)
+        .map((m) => `${m.role === 'bot' ? 'Бот' : 'Юзер'}: ${escapeHtmlForTelegram((m.text || '').slice(0, 300))}`)
+        .join('\n')
+    : null;
+
+  let text = `${label}\nОт: ${who}\n\n<b>Комментарий:</b>\n${escapeHtmlForTelegram(trimmedComment)}`;
+  if (reportedMessage) {
+    text += `\n\n<b>Ответ бота, на который жалуются:</b>\n${escapeHtmlForTelegram(String(reportedMessage).slice(0, 500))}`;
+  }
+  if (contextText) {
+    text += `\n\n<b>Контекст диалога:</b>\n${contextText}`;
+  }
+
+  const sent = await sendTelegramMessage(text);
+
+  if (!sent) {
+    console.log('📩 Репорт (Telegram недоступен, лог ниже):\n', text);
+  }
+
+  // Отвечаем "ок" даже если Telegram не настроен/недоступен — жалоба всё
+  // равно попадёт в лог сервера, юзер не должен видеть ошибку из-за этого.
+  res.json({ ok: true });
+});
+
+/* =====================================================================
    ЕДИНАЯ ТОЧКА ЧАТА (стриминг по SSE)
 
    Протокол простой: сервер отправляет строки вида "data: {...}\n\n".
