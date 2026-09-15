@@ -35,6 +35,13 @@ const searchCount = document.getElementById('searchCount');
 const clearBtn = document.getElementById('clearBtn');
 
 const bookmarksBtn = document.getElementById('bookmarksBtn');
+const reportOverlay = document.getElementById('reportOverlay');
+const reportCategory = document.getElementById('reportCategory');
+const reportComment = document.getElementById('reportComment');
+const reportContextHint = document.getElementById('reportContextHint');
+const sendReportBtn = document.getElementById('sendReportBtn');
+const closeReportBtn = document.getElementById('closeReportBtn');
+const reportBtnHeader = document.getElementById('reportBtn');
 const bookmarksOverlay = document.getElementById('bookmarksOverlay');
 const bookmarksList = document.getElementById('bookmarksList');
 const bookmarksEmptyHint = document.getElementById('bookmarksEmptyHint');
@@ -128,6 +135,7 @@ const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9a4 4 0 0 1 0 6"/><path d="M19 7a7.5 7.5 0 0 1 0 10"/></svg>';
 const ICON_REGENERATE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11A8 8 0 1 0 18.5 16"/><path d="M20 5v6h-6"/></svg>';
 const ICON_PIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1z"/></svg>';
+const ICON_FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h13l-3 4 3 4H5"/></svg>';
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
@@ -544,6 +552,16 @@ function addMessage(text, sender, { sources = [], imageUrl = null, save = true }
   pinBtn.title = 'Добавить в закладки';
   pinBtn.addEventListener('click', () => togglePin(messageDiv, sender, timestamp.textContent, pinBtn));
   actions.appendChild(pinBtn);
+
+  if (sender === 'bot') {
+    const reportBtn = document.createElement('button');
+    reportBtn.type = 'button';
+    reportBtn.classList.add('report-btn');
+    reportBtn.innerHTML = ICON_FLAG;
+    reportBtn.title = 'Сообщить об ошибке / предложить идею';
+    reportBtn.addEventListener('click', () => openReportModal(messageDiv));
+    actions.appendChild(reportBtn);
+  }
 
   footer.appendChild(actions);
   body.appendChild(footer);
@@ -1463,6 +1481,75 @@ settingsOverlay.addEventListener('click', (e) => {
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && settingsOverlay.classList.contains('open')) closeModal(settingsOverlay);
+});
+
+/* =====================================================================
+   РЕПОРТ В ПОДДЕРЖКУ (Telegram) — категория + автоприкладывание контекста
+   диалога. Если открыто с кнопки под конкретным ответом бота — в контекст
+   войдёт этот ответ и несколько сообщений до него. Если открыто из шапки
+   (без привязки к сообщению) — уйдёт хвост всего текущего разговора.
+   ===================================================================== */
+
+let reportTargetMessageDiv = null;
+
+function openReportModal(messageDiv) {
+  reportTargetMessageDiv = messageDiv || null;
+  reportCategory.value = messageDiv ? 'bug' : 'idea';
+  reportComment.value = '';
+  reportContextHint.textContent = messageDiv
+    ? 'К обращению прикрепится этот ответ бота и немного контекста разговора.'
+    : 'К обращению прикрепится последняя часть текущего разговора.';
+  openModal(reportOverlay);
+  reportComment.focus();
+}
+
+reportBtnHeader.addEventListener('click', () => openReportModal(null));
+
+closeReportBtn.addEventListener('click', () => closeModal(reportOverlay));
+reportOverlay.addEventListener('click', (e) => {
+  if (e.target === reportOverlay) closeModal(reportOverlay);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && reportOverlay.classList.contains('open')) closeModal(reportOverlay);
+});
+
+sendReportBtn.addEventListener('click', async () => {
+  const comment = reportComment.value.trim();
+  if (!comment) {
+    showToast('Напиши пару слов, что случилось или что предлагаешь');
+    return;
+  }
+
+  // Контекст диалога — последние несколько реплик из conversationHistory
+  // (уже в формате {role, parts:[{text}]}), плюс явно текст сообщения,
+  // на кнопку которого нажали (если репорт открыт из-под конкретного ответа).
+  const context = conversationHistory.slice(-6).map((turn) => ({
+    role: turn.role === 'model' ? 'bot' : 'user',
+    text: turn.parts?.[0]?.text || ''
+  }));
+  const reportedMessage = reportTargetMessageDiv ? reportTargetMessageDiv.dataset.rawText || '' : null;
+
+  sendReportBtn.disabled = true;
+  try {
+    const res = await fetch('/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        category: reportCategory.value,
+        comment,
+        reportedMessage,
+        context
+      })
+    });
+    if (!res.ok) throw new Error('bad status');
+    showToast('Спасибо! Обращение отправлено 🙏');
+    closeModal(reportOverlay);
+  } catch (err) {
+    showToast('Не получилось отправить — попробуй ещё раз чуть позже');
+  } finally {
+    sendReportBtn.disabled = false;
+  }
 });
 
 /* ===== Закладки ===== */
