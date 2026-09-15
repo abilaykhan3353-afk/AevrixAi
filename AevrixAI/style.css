@@ -1035,6 +1035,24 @@ mark {
   font-family: 'Inter', sans-serif;
 }
 
+.field textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass-strong);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  resize: vertical;
+  min-height: 70px;
+}
+
+.report-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 .checkbox-field {
   flex-direction: row;
   align-items: center;
