@@ -51,6 +51,9 @@
           </div>
         </div>
         <div class="header-actions">
+          <button id="reportBtn" title="Сообщить в поддержку" aria-label="Сообщить в поддержку">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h13l-3 4 3 4H5"/></svg>
+          </button>
           <button id="bookmarksBtn" title="Закладки" aria-label="Закладки">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1z"/></svg>
           </button>
@@ -158,6 +161,27 @@
       </label>
       <button id="copyShareLinkBtn" class="primary-btn">Скопировать ссылку</button>
       <button id="closeShareBtn" class="danger-btn">Закрыть</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="reportOverlay" hidden>
+    <div class="modal">
+      <h2>Сообщить в поддержку</h2>
+      <label class="field">
+        <span>Тип обращения</span>
+        <select id="reportCategory">
+          <option value="bug">Ошибка бота</option>
+          <option value="idea">Предложение / идея</option>
+          <option value="other">Другое</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Комментарий</span>
+        <textarea id="reportComment" rows="4" placeholder="Что пошло не так или что добавить?"></textarea>
+      </label>
+      <p class="auth-hint auth-hint-standalone" id="reportContextHint"></p>
+      <button id="sendReportBtn" class="primary-btn">Отправить</button>
+      <button id="closeReportBtn" class="danger-btn">Отмена</button>
     </div>
   </div>
 
