@@ -855,14 +855,15 @@ async function classifyIntent(message) {
 
 const REPORT_CATEGORY_LABELS = { bug: '🐞 Ошибка бота', idea: '💡 Предложение', other: '📩 Другое' };
 
-async function sendTelegramMessage(text) {
-  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) return false;
+async function sendTelegramMessage(text, chatId) {
+  const targetChatId = chatId || process.env.TELEGRAM_CHAT_ID;
+  if (!process.env.TELEGRAM_BOT_TOKEN || !targetChatId) return false;
   try {
     const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: process.env.TELEGRAM_CHAT_ID,
+        chat_id: targetChatId,
         text,
         parse_mode: 'HTML',
         disable_web_page_preview: true
@@ -918,6 +919,42 @@ app.post('/api/report', async (req, res) => {
   // Отвечаем "ок" даже если Telegram не настроен/недоступен — жалоба всё
   // равно попадёт в лог сервера, юзер не должен видеть ошибку из-за этого.
   res.json({ ok: true });
+});
+
+/* =====================================================================
+   TELEGRAM WEBHOOK — команды бота (/start, /help, /id).
+   Telegram шлёт сюда апдейты после setWebhook (см. инструкцию в чате).
+   Если задан TELEGRAM_WEBHOOK_SECRET — проверяем заголовок-секрет, чтобы
+   роут не мог дёргать кто попало, зная только URL.
+   ===================================================================== */
+
+const TELEGRAM_COMMANDS_TEXT =
+  '<b>Aevrix Support Bot</b>\n\n' +
+  'Сюда автоматически приходят жалобы на ответы бота и предложения от ' +
+  'пользователей чата Aevrix Ai — ничего отправлять самому не нужно.\n\n' +
+  'Команды:\n' +
+  '/help — это сообщение\n' +
+  '/id — узнать chat_id этого чата (пригодится для TELEGRAM_CHAT_ID в .env)';
+
+app.post('/api/telegram/webhook', async (req, res) => {
+  // Отвечаем 200 сразу в любом случае — иначе Telegram будет ретраить апдейт
+  res.sendStatus(200);
+
+  if (process.env.TELEGRAM_WEBHOOK_SECRET) {
+    const secretHeader = req.get('x-telegram-bot-api-secret-token');
+    if (secretHeader !== process.env.TELEGRAM_WEBHOOK_SECRET) return;
+  }
+
+  const message = req.body?.message;
+  const text = message?.text;
+  const chatId = message?.chat?.id;
+  if (!text || !chatId) return;
+
+  if (text.startsWith('/start') || text.startsWith('/help')) {
+    await sendTelegramMessage(TELEGRAM_COMMANDS_TEXT, chatId);
+  } else if (text.startsWith('/id')) {
+    await sendTelegramMessage(`chat_id этого чата: <code>${chatId}</code>`, chatId);
+  }
 });
 
 /* =====================================================================
