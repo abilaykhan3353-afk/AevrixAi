@@ -37,8 +37,13 @@ function originGuard(cfg) {
   return (req, res, next) => {
     const origin = req.get('origin');
     const own = cfg.origin || `${req.protocol}://${req.get('host')}`;
+    // Opening the public page from Render/search is navigation, not an API call.
+    const publicNavigation = ['GET', 'HEAD'].includes(req.method)
+      && ['/', '/index.html'].includes(req.path)
+      && req.get('sec-fetch-mode') === 'navigate'
+      && req.get('sec-fetch-dest') === 'document';
     if (origin && origin !== own && !cfg.origins.has(origin)) return next(new AppError(403, 'origin_forbidden', 'Источник запроса не разрешён.'));
-    if (req.get('sec-fetch-site') === 'cross-site' && !origin && !req.path.startsWith('/api/telegram/')) return next(new AppError(403, 'origin_forbidden', 'Источник запроса не разрешён.'));
+    if (req.get('sec-fetch-site') === 'cross-site' && !origin && !publicNavigation && !req.path.startsWith('/api/telegram/')) return next(new AppError(403, 'origin_forbidden', 'Источник запроса не разрешён.'));
     if (origin && cfg.origins.has(origin)) { res.set('Access-Control-Allow-Origin', origin); res.set('Access-Control-Allow-Credentials', 'true'); res.vary('Origin'); }
     if (req.method === 'OPTIONS') { res.set('Access-Control-Allow-Headers', 'Content-Type'); res.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE'); return res.sendStatus(204); }
     next();
