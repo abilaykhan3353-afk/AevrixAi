@@ -1,6 +1,6 @@
 const {config}=require('./config'),{createDatabase,migrate}=require('./database'),{createApp}=require('./app');
 async function start(){
-  const cfg=config(),db=createDatabase(cfg);if(db)await migrate(db,{allowLegacy:process.env.LEGACY_BACKUP_CONFIRMED==='true'});
+  const cfg=config(),db=createDatabase(cfg);try{if(db)await migrate(db,{allowLegacy:process.env.LEGACY_BACKUP_CONFIRMED==='true'});}catch(error){await db?.close().catch(()=>{});throw error;}
   const {app,coordinator}=createApp({cfg,db});const server=app.listen(cfg.port,()=>console.log(`Aevrix AI 3.0: http://localhost:${cfg.port}`));let closing=false;
   async function shutdown(code=0){if(closing)return;closing=true;for(const session of coordinator.active.values()){session.cancelled=true;session.controller.abort();}server.close();const timer=setTimeout(()=>process.exit(code||1),10000);timer.unref();while(coordinator.active.size)await new Promise(resolve=>setTimeout(resolve,50));await db?.close();clearTimeout(timer);process.exitCode=code;}
   process.on('SIGINT',()=>shutdown());process.on('SIGTERM',()=>shutdown());process.on('uncaughtException',()=>{console.error(JSON.stringify({event:'uncaught_exception'}));shutdown(1);});process.on('unhandledRejection',()=>{console.error(JSON.stringify({event:'unhandled_rejection'}));shutdown(1);});
