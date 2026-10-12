@@ -1,0 +1,72 @@
+
+> aevrix-ai@3.0.0 test
+> node --experimental-vm-modules --test --test-concurrency=1 tests/v3/integration.test.js tests/v3/lifecycle.test.js tests/v3/client.test.js tests/v3/tools.test.js
+
+(node:2808) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ rendering blocks executable markup and source URLs while preserving literal code (129.5128ms)
+✔ client SSE handles fragmented UTF-8, ignores heartbeat and rejects EOF without done (16.3269ms)
+✔ migration requires backup acknowledgement, preserves all 205 messages and is idempotent (1815.4329ms)
+▶ Express + PostgreSQL workflows
+  ✔ private files are blocked for GET, HEAD and encoded traversal (66.8833ms)
+{"event":"request_error","requestId":"f6535560-529e-499e-820c-08467d473ee2","code":"admin_disabled"}
+{"event":"request_error","requestId":"a3b72f1a-8481-46e4-899b-3c34d11885b1","code":"webhook_disabled"}
+  ✔ origins, malformed auth and admin fail closed (15.7479ms)
+{"event":"generation","requestId":"2fb8acb3-3037-461a-85a1-fa44f40e0643","status":"failed","errorCode":"not_found","model":null,"durationMs":3,"firstTokenMs":null,"orchestrationSteps":0,"externalCalls":0,"providerUsage":[]}
+  ✔ another owner cannot read, mutate, fork or generate in this conversation (26.0964ms)
+{"event":"generation","requestId":"76411f82-541b-401f-8611-b4425b1ddb44","status":"completed","errorCode":null,"model":"fixture","durationMs":26,"firstTokenMs":23,"orchestrationSteps":2,"externalCalls":0,"providerUsage":[]}
+  ✔ generation creates stable IDs, stores one question and one answer, retains >600 chars (37.3955ms)
+{"event":"generation","requestId":"6a8d65d3-fc06-4110-b48c-d2d6202f7460","status":"completed","errorCode":null,"model":"fixture","durationMs":14,"firstTokenMs":12,"orchestrationSteps":2,"externalCalls":0,"providerUsage":[]}
+  ✔ regeneration preserves old version and does not duplicate the question (45.7352ms)
+{"event":"generation","requestId":"45ddc39b-9dc8-4a15-8498-3164c33407e7","status":"completed","errorCode":null,"model":"fixture","durationMs":12,"firstTokenMs":10,"orchestrationSteps":2,"externalCalls":0,"providerUsage":[]}
+{"event":"generation","requestId":"45ddc39b-9dc8-4a15-8498-3164c33407e7","status":"completed","errorCode":null,"model":null,"durationMs":3,"firstTokenMs":3,"orchestrationSteps":0,"externalCalls":0,"providerUsage":[]}
+{"event":"generation","requestId":"08d895bb-0c06-4499-8df8-380a6cc57ded","status":"failed","errorCode":"idempotency_conflict","model":null,"durationMs":2,"firstTokenMs":null,"orchestrationSteps":0,"externalCalls":0,"providerUsage":[]}
+  ✔ idempotency replays an existing answer and detects changed payload (29.3757ms)
+{"event":"generation","requestId":"18b29641-1e9b-4bf1-bc7d-36f536f5ce08","status":"partial","errorCode":"incomplete_stream","model":null,"durationMs":14,"firstTokenMs":12,"orchestrationSteps":2,"externalCalls":0,"providerUsage":[]}
+  ✔ partial upstream cannot append fallback and remains partial after reload (24.0402ms)
+{"event":"generation","requestId":"808b3a94-5e50-40d9-8853-2c0342ade85d","status":"completed","errorCode":null,"model":"fixture","durationMs":16,"firstTokenMs":14,"orchestrationSteps":1,"externalCalls":0,"providerUsage":[]}
+  ✔ modes and explicit memory are stored per user and change actual system prompt (37.8329ms)
+{"event":"generation","requestId":"6014bb21-1b53-459d-b409-a882e2cf43e4","status":"completed","errorCode":null,"model":"fixture","durationMs":14,"firstTokenMs":12,"orchestrationSteps":1,"externalCalls":0,"providerUsage":[]}
+  ✔ image magic is validated and account attachment survives reload (43.3602ms)
+{"event":"generation","requestId":"0834b658-864c-47cc-9964-1dfaa88f81a1","status":"completed","errorCode":null,"model":"fixture","durationMs":18,"firstTokenMs":15,"orchestrationSteps":1,"externalCalls":0,"providerUsage":[]}
+{"event":"generation","requestId":"690854be-c035-4d6d-bbb5-289fb6d2d8ac","status":"completed","errorCode":null,"model":"document-retrieval","durationMs":14,"firstTokenMs":12,"orchestrationSteps":0,"externalCalls":0,"providerUsage":[]}
+  ✔ documents are genuinely retrieved with fragments; injection is data, no missing-answer invention (60.8735ms)
+  ✔ fork creates isolated copy and deleting a document cascades derived chunks (38.5021ms)
+  ✔ bookmarks are isolated and export is full selected history (23.3522ms)
+  ✔ report is durable without claiming Telegram delivery; logout revokes JWT (15.2199ms)
+✔ Express + PostgreSQL workflows (2296.1375ms)
+✔ provider SSE recognizes CRLF, fragmented Unicode and terminal state (15.6071ms)
+✔ context budget summarizes whole older exchanges without truncating latest code (26.0127ms)
+{"event":"generation","requestId":"158edb5f-d7bf-4870-aafe-99a3f29f2b66","status":"cancelled","errorCode":"cancelled","model":null,"durationMs":45,"firstTokenMs":null,"orchestrationSteps":2,"externalCalls":0,"providerUsage":[]}
+✔ Stop enforces owner, aborts upstream, disallows concurrent generation and persists cancelled state (2120.9921ms)
+{"event":"generation","requestId":"aa32e3e7-1734-4f45-9c23-b722426de1c2","status":"cancelled","errorCode":"cancelled","model":null,"durationMs":13,"firstTokenMs":null,"orchestrationSteps":2,"externalCalls":0,"providerUsage":[]}
+▶ disconnect cancels provider; deadline and persistence errors never report success
+  ✔ disconnect (1364.2541ms)
+{"event":"generation","requestId":"511b1d6f-70d6-4c8a-aaa2-1c91a77159f4","status":"failed","errorCode":"deadline","model":null,"durationMs":1007,"firstTokenMs":null,"orchestrationSteps":2,"externalCalls":0,"providerUsage":[]}
+  ✔ deadline (2309.8312ms)
+{"event":"request_error","requestId":"ec38b3b2-4a15-4ae6-ac09-a21dcf405ec2","code":"internal_error"}
+{"event":"generation","requestId":"01c3b76b-17e8-4ae0-b1cb-7ab50561f19e","status":"partial","errorCode":"persistence_failed","model":"fixture","durationMs":20,"firstTokenMs":19,"orchestrationSteps":2,"externalCalls":0,"providerUsage":[]}
+  ✔ failed DELETE and failed generation persistence (1608.8833ms)
+✔ disconnect cancels provider; deadline and persistence errors never report success (5286.4431ms)
+{"event":"generation","requestId":"bea8712e-23c6-4e70-b2d3-b408ab07070d","status":"completed","errorCode":null,"model":"fixture","durationMs":7,"firstTokenMs":6,"orchestrationSteps":2,"externalCalls":0,"providerUsage":[]}
+{"event":"request_error","requestId":"2e7aa7c3-f2ff-4cd8-b666-19780f198d7e","code":"webhook_disabled"}
+✔ rate limits enforce Retry-After; absent webhook secret does not process updates (1298.5177ms)
+✔ PDF extraction returns pages and rejects corrupt and scanned-only input (385.1483ms)
+✔ ordinary chat skips intent model; weather follow-up includes preceding city and forecast date (1.511ms)
+✔ forecast selects requested day, currency conversion has timestamp and deterministic amount (24.0387ms)
+✔ disabled and broken search is an explicit error, dangerous URLs are omitted (0.7359ms)
+✔ telemetry counts every outbound HTTP call and contains usage without message content (1.1273ms)
+✔ generated image is checked on server and key is sent in Authorization, never in URL (94.5592ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16170.7612
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
