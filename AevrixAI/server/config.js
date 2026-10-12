@@ -25,9 +25,13 @@ function config(env = process.env) {
     retentionDays: number('DATA_RETENTION_DAYS', 0, 0, 3650),
     groqKey: env.GROQ_API_KEY, chatModel: env.CHAT_MODEL || 'openai/gpt-oss-20b',
     fallbackModel: env.CHAT_FALLBACK_MODEL || '', visionModel: env.VISION_MODEL || 'qwen/qwen3.8-27b',
+    visionProvider: env.VISION_PROVIDER === 'gemini' ? 'gemini' : 'groq',
     geminiKey: env.GEMINI_API_KEY, geminiModel: env.GEMINI_MODEL || 'gemini-3.8-flash',
     tavilyKey: env.TAVILY_API_KEY, braveKey: env.BRAVE_API_KEY,
     pollinationsKey: env.POLLINATIONS_API_KEY, imageModel: env.IMAGE_MODEL || 'flux',
+    cloudflareKey: env.CLOUDFLARE_API_TOKEN, cloudflareAccount: env.CLOUDFLARE_ACCOUNT_ID?.trim(),
+    imageProvider: ['auto','cloudflare','pollinations'].includes(env.IMAGE_PROVIDER)?env.IMAGE_PROVIDER:'auto',
+    imageEnhance: env.IMAGE_ENHANCE_PROMPT !== 'false',
     telegramToken: env.TELEGRAM_BOT_TOKEN, telegramChat: env.TELEGRAM_CHAT_ID, webhookSecret: env.TELEGRAM_WEBHOOK_SECRET,
     newsdataKey: env.NEWSDATA_API_KEY, gnewsKey: env.GNEWS_API_KEY };
 }

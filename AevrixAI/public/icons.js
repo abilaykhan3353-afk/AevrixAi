@@ -10,6 +10,7 @@ const paths={
   attachBtn:'M8 12l6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l8-8',
   micBtn:'M9 4a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0V4M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8',
   emojiBtn:'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0M8 9h.01M16 9h.01M8 15s1.5 3 4 3 4-3 4-3',
+  createImageBtn:'M4 3h16v18H4zM7 17l4-5 3 3 3-4M8 7h.01',
   sendButton:'M12 20V4M5 11l7-7 7 7',
   themeToggle:'M20 15a9 9 0 0 1-11-11A9 9 0 1 0 20 15'
 };

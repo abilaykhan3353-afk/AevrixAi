@@ -16,9 +16,11 @@ function createApp({cfg,db=null,providers=new Providers(cfg)}){
   app.use(express.static(path.join(__dirname,'../public'),{dotfiles:'deny',index:'index.html',fallthrough:true}));
   const accountReady=()=>{if(!db||!cfg.jwtSecret)fail(503,'accounts_disabled','Аккаунты не настроены: нужны DATABASE_URL и JWT_SECRET.');};
   const cookieOptions={httpOnly:true,secure:cfg.production,sameSite:'lax',path:'/'};
+  const cloudflareReady=!!(cfg.cloudflareKey&&/^[a-f0-9]{32}$/i.test(cfg.cloudflareAccount||''));
+  const imagesReady=cfg.imageProvider==='cloudflare'?cloudflareReady:cfg.imageProvider==='pollinations'?!!cfg.pollinationsKey:!!(cloudflareReady||cfg.pollinationsKey);
   const setToken=(res,user)=>res.cookie('token',jwt.sign({id:user.id,v:user.session_version},cfg.jwtSecret,{algorithm:'HS256',expiresIn:'7d',issuer:'aevrix',audience:'aevrix-web'}),{...cookieOptions,maxAge:7*86400000});
-  app.get('/api/config',(req,res)=>res.json({version:'3.1.1',preview:cfg.preview===true,accounts:!!db,chat:!!cfg.groqKey,vision:!!(cfg.groqKey||cfg.geminiKey),search:!!(cfg.tavilyKey||cfg.braveKey),images:!!cfg.pollinationsKey,documents:!!db,deadlineMs:cfg.deadlineMs,retentionDays:cfg.retentionDays}));
-  app.get('/healthz',(req,res)=>res.json({ok:true,version:'3.1.1'}));
+  app.get('/api/config',(req,res)=>res.json({version:'3.2.0',preview:cfg.preview===true,accounts:!!db,chat:!!cfg.groqKey,vision:!!(cfg.groqKey||cfg.geminiKey),search:!!(cfg.tavilyKey||cfg.braveKey),images:imagesReady,documents:!!db,deadlineMs:cfg.deadlineMs,retentionDays:cfg.retentionDays}));
+  app.get('/healthz',(req,res)=>res.json({ok:true,version:'3.2.0'}));
   app.get('/readyz',route(async(req,res)=>{if(db)await db.query('SELECT 1');res.json({ok:true,database:!!db});}));
   const loginLimit=limiter(8,15*60000);
   app.post('/api/auth/register',loginLimit,route(async(req,res)=>{
