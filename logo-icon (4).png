@@ -1,0 +1,25 @@
+{
+  "passed": 16,
+  "checks": [
+    "Guest generation and full text",
+    "IndexedDB guest restoration",
+    "Account registration isolates guest state",
+    "Study mode reaches backend",
+    "Regeneration does not duplicate question",
+    "Multiline draft restoration",
+    "Document upload and cited fragment",
+    "Bookmarks",
+    "Full export Blob content (download persistence blocked by environment)",
+    "Light and dark themes",
+    "Unstored question restores draft instead of losing text",
+    "Layout 360px",
+    "Layout 390px",
+    "Layout 768px",
+    "Layout 1440px",
+    "Logout state isolation"
+  ],
+  "errors": [],
+  "externalAI": false,
+  "engine": "Chrome headless",
+  "database": "PGlite PostgreSQL"
+}

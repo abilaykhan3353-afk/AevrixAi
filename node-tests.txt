@@ -1,0 +1,12 @@
+[
+ {"id":"ordinary","message":"Объясни рекурсию"},
+ {"id":"explain","message":"Объясни фотосинтез","mode":"explain"},
+ {"id":"hint","message":"Дай подсказку к уравнению x+2=7","mode":"hint"},
+ {"id":"check","message":"Проверь решение x=3 для x+2=7","mode":"check"},
+ {"id":"quiz","message":"Мини-тест по дробям","mode":"quiz"},
+ {"id":"code","message":"Помоги с кодом: function square(x) { return x * x; }"},
+ {"id":"search-off","message":"Какая погода сейчас?","search":"off"},
+ {"id":"partial","message":"Длинный ответ","behaviour":"partial","expected":"partial"},
+ {"id":"provider-failure","message":"Проверка ошибки","behaviour":"fail-before","expected":"failed"},
+ {"id":"language","message":"Қазақ тілінде қысқа жауап бер"}
+]
