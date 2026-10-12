@@ -27,3 +27,8 @@ test('news falls back to search when a configured news API rejects the key',asyn
 test('stream usage is counted once even if a provider repeats the usage footer',async()=>{
  const p=new Providers({groqKey:'fixture',chatModel:'fixture'},async()=>new Response('data: {"choices":[{"delta":{"content":"OK"}}]}\n\ndata: {"choices":[{"finish_reason":"stop"}],"usage":{"total_tokens":10}}\n\ndata: {"choices":[],"usage":{"total_tokens":10}}\n\ndata: [DONE]\n\n'));await trace.run({externalCalls:0,usage:[]},async()=>{await p.groq([],signal(),{stream:true});assert.equal(trace.getStore().usage.length,1);});
 });
+test('search converts response instructions to precise keywords and keeps official-domain filters',async()=>{
+ let sent,model;const p=new Providers({groqKey:'fixture',chatModel:'large',fallbackModel:'small',tavilyKey:'fixture'},async(url,options)=>{sent=JSON.parse(options.body);return Response.json({results:[{url:'https://developers.cloudflare.com/workers-ai/platform/pricing/',title:'Pricing',content:'Daily free allocation'}]});});
+ p.groq=async(messages,_signal,options)=>{model=options.model;assert.match(messages[1].content,/Cloudflare/);return{text:JSON.stringify({query:'Cloudflare Workers AI free daily limit site:developers.cloudflare.com'})};};const result=await p.search('Найди дневной лимит Cloudflare Workers AI, ответь кратко',signal());assert.equal(model,'small');assert.deepEqual(sent.include_domains,['developers.cloudflare.com']);assert.match(sent.query,/Workers AI/);assert.equal(result.sources.length,1);
+ p.groq=async()=>{throw Error('temporary failure');};await p.search('Cloudflare original query',signal());assert.equal(sent.query,'Cloudflare original query');assert.equal(sent.include_domains,undefined);
+});

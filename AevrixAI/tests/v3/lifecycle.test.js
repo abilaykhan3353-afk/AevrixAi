@@ -35,4 +35,5 @@ test('PDF extraction returns pages and rejects corrupt and scanned-only input',a
  const result=await extract({name:'fixture.pdf',data:Buffer.from(pdf).toString('base64')},AbortSignal.timeout(15000));assert.equal(result.chunks[0].page,1);assert.match(result.chunks[0].text,/Photosynthesis/);
  await assert.rejects(()=>extract({name:'broken.pdf',data:Buffer.from('%PDF-invalid').toString('base64')},AbortSignal.timeout(15000)),e=>e.code==='document_invalid');
  await assert.rejects(()=>extract({name:'file.exe',data:'YWJj'},AbortSignal.timeout(5000)),e=>e.status===400);
+ const cancelled=new AbortController();cancelled.abort();await assert.rejects(()=>extract({name:'fixture.pdf',data:Buffer.from(pdf).toString('base64')},cancelled.signal),e=>e.code==='cancelled');
 });
