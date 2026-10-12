@@ -31,7 +31,7 @@ export function hideModal(dialog) {
   dialog.dataset.closing='true';
   const animation=animate(dialog,[{opacity:1,transform:'translateY(0) scale(1)'},{opacity:0,transform:'translateY(10px) scale(.98)'}],{duration:150});
   const close=()=>{if(dialog.dataset.closing==='true'){dialog.close();dialog.dataset.closing='false';}};
-  if(animation)animation.finished.then(close,()=>{});else close();
+  if(animation)animation.finished.then(close,()=>{if(reduced.matches)close();});else close();
 }
 export function generating(active) {document.body.dataset.generating=String(active);}
 export function finishMessage(node) {animate(node,[{opacity:.65},{opacity:1}],{duration:220});}
@@ -43,6 +43,9 @@ export function themeTransition(apply) {
 }
 export function initMotion() {
   document.body.classList.add('motion-ready');
+  reduced.addEventListener('change',()=>{
+    if(reduced.matches){document.getAnimations().forEach(animation=>animation.cancel());document.querySelectorAll('.pressed').forEach(button=>button.classList.remove('pressed'));}
+  });
   document.addEventListener('pointerdown',event=>{
     if(reduced.matches||event.button!==0)return;
     const button=event.target.closest('button');
