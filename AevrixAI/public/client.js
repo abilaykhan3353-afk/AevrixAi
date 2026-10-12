@@ -5,7 +5,7 @@ import * as motion from './motion.js';
 import {initSelects,syncSelects,closeSelects} from './selects.js';
 import {initIcons} from './icons.js';
 const $=id=>document.getElementById(id);
-const state={user:null,config:{},conversations:[],guest:[],current:null,messages:[],archived:false,active:null,pendingImage:null,nextBefore:null,ready:false,preferenceBusy:false,conversationLoading:false};
+const state={user:null,config:{},conversations:[],guest:[],current:null,messages:[],archived:false,active:null,pendingImage:null,nextBefore:null,ready:false,preferenceBusy:false,conversationLoading:false,creating:false};
 let toastTimer,priorFocus,stick=true,selectionTicket=0,creationPromise=null;
 const modeNames={chat:'Помощник',explain:'Объясни',hint:'Подсказка',check:'Проверка',quiz:'Мини-тест'};
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;motion.notify($('toast'));clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,5000);}
@@ -46,9 +46,10 @@ async function select(c){
   }finally{if(ticket===selectionTicket){state.conversationLoading=false;syncPreferenceControls();}}
 }
 async function create(){
- if(!state.ready)return toast('Приложение загружается.');if(blocked())return;if(creationPromise)return creationPromise;saveDraft();
- creationPromise=(async()=>{if(state.user){const result=await api('/api/conversations',{method:'POST',body:{}});await list();await select(result.conversation);}else{const c={id:crypto.randomUUID(),title:'Новый диалог',mode:'chat',search_mode:'auto',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),messages:[]};state.guest.unshift(c);await persist();await list();await select(c);}})();
- try{return await creationPromise;}finally{creationPromise=null;}
+ if(!state.ready)return toast('Приложение загружается.');if(blocked())return;if(creationPromise)return creationPromise;saveDraft();const initialDraft=state.current?null:$('userInput').value;state.creating=true;syncPreferenceControls();
+ const open=async c=>{if(initialDraft!==null){try{localStorage.setItem(scopedKey(state.user,'draft',c.id),initialDraft);}catch{toast('Не удалось сохранить черновик на устройстве.');}}await list();await select(c);};
+ creationPromise=(async()=>{if(state.user){const result=await api('/api/conversations',{method:'POST',body:{}});await open(result.conversation);}else{const c={id:crypto.randomUUID(),title:'Новый диалог',mode:'chat',search_mode:'auto',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),messages:[]};state.guest.unshift(c);await persist();await open(c);}})();
+ try{return await creationPromise;}finally{creationPromise=null;state.creating=false;syncPreferenceControls();}
 }
 function autoscroll(){if(stick)$('timeline').scrollTop=$('timeline').scrollHeight;else $('jumpToBottom').hidden=false;}
 $('timeline').addEventListener('scroll',()=>{const t=$('timeline');stick=t.scrollHeight-t.scrollTop-t.clientHeight<80;$('jumpToBottom').hidden=stick;});$('jumpToBottom').onclick=()=>{stick=true;$('timeline').scrollTo({top:$('timeline').scrollHeight,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};
@@ -77,10 +78,11 @@ function renderMessage(message){
 function updateState(m,node){const names={queued:'Ожидает ответа',running:'Ответ пишется…',partial:'Ответ не завершён',cancelled:'Ответ остановлен',failed:'Не удалось получить ответ'};node.textContent=m.error||names[m.status]||'';node.classList.toggle('error',m.status==='failed'||!!m.error);node.closest('.message').dataset.status=m.status||'completed';}
 async function refreshDocs(){if(!state.user||!state.current){$('docCount').textContent='';return[];}const result=await api(`/api/conversations/${state.current.id}/documents`);$('docCount').textContent=result.documents.length||'';return result.documents;}
 function syncPreferenceControls(){
-  const disabled=!state.ready||state.conversationLoading||!!state.active||state.preferenceBusy||!!state.current?.archived_at;
+  const disabled=!state.ready||state.conversationLoading||state.creating||!!state.active||state.preferenceBusy||!!state.current?.archived_at;
   for(const id of ['mode','searchMode']){$(id).disabled=disabled;$(id).dataset.pending=String(state.preferenceBusy);}
   $('createImageBtn').disabled=disabled;
-  $('sendButton').disabled=!state.ready||state.conversationLoading||state.preferenceBusy||!!state.current?.archived_at;syncSelects();
+  $('userInput').disabled=!state.ready||state.conversationLoading||state.creating||!!state.active||!!state.current?.archived_at;
+  $('sendButton').disabled=!state.ready||state.conversationLoading||state.creating||state.preferenceBusy||!!state.current?.archived_at;syncSelects();
 }
 async function patch(value){
   if(!state.current)await create();const target=state.current;if(!target)throw new Error('Приложение ещё загружается.');

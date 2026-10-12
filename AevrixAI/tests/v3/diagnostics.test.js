@@ -13,3 +13,7 @@ test('provider diagnostics isolate failures and never include keys or raw upstre
  });
  assert.equal(result.results.find(r=>r.name==='gemini').status,'access_denied');assert.equal(result.results.find(r=>r.name==='brave').status,'rate_limited');assert.equal(result.results.find(r=>r.name==='tavily').status,'ok');assert.equal(result.results.find(r=>r.name==='pollinations').status,'not_configured');assert.equal(result.results.find(r=>r.name==='cloudflare').status,'ok');assert.equal(JSON.stringify(result).includes(secret),false);
 });
+test('selected provider checks avoid unrelated API calls and distinguish timeouts',async()=>{
+ const calls=[],result=await checkProviders({geminiKey:'private',geminiModel:'fixture',groqKey:'other'},null,async url=>{calls.push(url);if(url.includes('generateContent'))throw new DOMException('Timeout','TimeoutError');return Response.json({models:[{name:'models/fixture'}]});},{only:['gemini']});
+ assert.equal(calls.length,2);assert.ok(calls.every(url=>url.includes('googleapis.com')));assert.equal(result.results.find(row=>row.name==='gemini_access').available,true);assert.equal(result.results.find(row=>row.name==='gemini').status,'timeout');assert.equal(JSON.stringify(result).includes('private'),false);
+});

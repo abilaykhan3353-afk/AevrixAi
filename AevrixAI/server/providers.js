@@ -26,7 +26,7 @@ class Providers {
     const telemetry=trace.getStore();if(telemetry)telemetry.externalCalls++;
     const combined=AbortSignal.any([signal,AbortSignal.timeout(timeout)]);
     let res;
-    try{res=await this.fetch(url,{...options,signal:combined,redirect:'error'});}catch(error){if(combined.aborted)throw error;fail(503,'provider_unavailable','Внешний сервис сейчас недоступен.');}
+    try{res=await this.fetch(url,{...options,signal:combined,redirect:'error'});}catch(error){if(combined.aborted||error.name==='TimeoutError')throw error;fail(503,'provider_unavailable','Внешний сервис сейчас недоступен.');}
     if(!res.ok){await res.body?.cancel().catch(()=>{});const error=new AppError(res.status===429?429:503,'provider_error',res.status===429?'Лимит внешнего сервиса исчерпан. Попробуй позже.':res.status===401||res.status===403?'Сервис отклонил доступ. Владелец бота может проверить подключение.':res.status===402?'Бесплатный лимит сервиса исчерпан или для этой функции требуется доступ.':'Внешний сервис временно недоступен. Попробуй позже.');error.providerStatus=res.status;throw error;}
     return res;
   }
